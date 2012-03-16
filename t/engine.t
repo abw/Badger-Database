@@ -1,0 +1,86 @@
+#============================================================= -*-perl-*-
+#
+# t/engine.t
+#
+# Test the Badger::Database::Engine module.
+#
+# Written by Andy Wardley
+#
+#========================================================================
+
+use strict;
+use warnings;
+use lib qw( ./lib ../lib ../../lib );
+use Badger::Test
+    tests => 6,
+    debug => 'Badger::Database::Engine',
+    args  => \@ARGV;
+
+use Badger::Database::Engine;
+use constant Engine => 'Badger::Database::Engine';
+
+my $engine = eval { Engine->new };
+ok( ! $engine, 'failed to create default engine' );
+is( Engine->reason, 'No database specified', 'got no database error' );
+
+$engine = Engine->new(
+    type => 'mysql',
+    name => 'test',
+    user => 'test',
+    pass => 'test',
+);
+ok( $engine, 'connected engine' );
+ok( $engine->reconnect, 'reconnected engine' );
+
+is( $engine->type, 'mysql', 'got engine type' );
+is( $engine->name, 'test', 'got engine name' );
+
+
+__END__
+
+#-----------------------------------------------------------------------
+# create engine using named parameters
+#-----------------------------------------------------------------------
+
+$engine = Engine->new(
+    type => 'mysql',
+    name => 'example',
+    user => 'tom',
+    pass => 'secret',
+    host => 'example.com'
+);
+ok( $engine, 'created engine with configuration params' );
+is( $engine->type, 'mysql', 'got engine type' );
+is( $engine->name, 'example', 'got engine name' );
+is( $engine->user, 'tom', 'got engine user' );
+is( $engine->pass, 'secret', 'got engine password' );
+is( $engine->host, 'example.com', 'got engine host' );
+
+__END__
+
+#-----------------------------------------------------------------------
+# create engine using aliases named parameters
+#-----------------------------------------------------------------------
+
+$engine = Engine->new(
+    driver   => 'mysql',
+    database => 'example',
+    username => 'tom',
+    password => 'secret',
+);
+ok( $engine, 'created engine with configuration param aliases' );
+is( $engine->type, 'mysql', 'got engine type from alias' );
+is( $engine->name, 'example', 'got engine name from alias' );
+is( $engine->user, 'tom', 'got engine user from alias' );
+is( $engine->pass, 'secret', 'got engine pass from alias' );
+
+
+#-----------------------------------------------------------------------
+# check we can access using alternate accessor names, too
+#-----------------------------------------------------------------------
+
+is( $engine->driver, 'mysql', 'got engine driver' );
+is( $engine->database, 'example', 'got engine database' );
+is( $engine->username, 'tom', 'got engine username' );
+is( $engine->password, 'secret', 'got engine password' );
+

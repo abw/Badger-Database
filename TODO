@@ -1,0 +1,3 @@
+Decide what to do with auto-generated update records in Badger::Database::Record.
+At present they generate live update methods which is a bit dangerous.  Better to
+make it configurable, and/or default to something safer.
