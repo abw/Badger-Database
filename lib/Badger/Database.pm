@@ -47,7 +47,7 @@ use Badger::Class
        'table|class:TABLE',                      # optional name of table class
      ];
 
-our $VERSION = 0.02;                    # for ExtUtils::MakeMaker
+our $VERSION = 0.03;                    # for ExtUtils::MakeMaker
 
 class->methods(
     name => \&database,

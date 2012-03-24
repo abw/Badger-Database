@@ -50,7 +50,7 @@ my $makefile    = {
     VERSION_FROM => 'lib/Badger/Database.pm',
     PMLIBDIRS    => [ 'lib' ], 
     PREREQ_PM    => {
-        Badger   => 0.03,
+        Badger   => 0.09,
         DBI      => 1.604,
     },
     dist         => {
