@@ -49,7 +49,7 @@ sub init {
         || return $self->error_msg('no_table');
         
     $meta->{ fkey } = $config->{ fkey }
-        || $self->{ table }->key;
+        || $meta->{ table }->key;
 
     $meta->{ where     } = $config->{ where };
     $meta->{ order     } = $config->{ order } || $config->{ order_by };
