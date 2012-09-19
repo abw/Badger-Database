@@ -100,7 +100,7 @@ sub columns {
     my $self    = shift;
     my $newcols = @_ == 1 && ref $_[0] eq ARRAY ? shift : [ @_ ];
     my $columns = $self->{ columns } ||= { };
-    my $table   = $self->{ from    }->[-1];
+    my $table   = $self->table_name;
     my $val;
 
     $self->debug("new columns(): ", $self->dump_data($newcols)) if DEBUG;
@@ -130,7 +130,13 @@ sub columns {
 }
 
 
-sub prepare_sql {
+sub table_name {
+    my $self = shift;
+    return $self->{ from }->[-1];
+}
+
+
+sub sql_fragments {
     my $self  = shift;
     my $frags = {
         map { 
@@ -142,11 +148,19 @@ sub prepare_sql {
         } 
         @FRAGMENTS
     };
+    $frags->{ select } ||= '*';
+
+    return $frags;        
+}
+
+
+sub prepare_sql {
+    my $self  = shift;
+    my $frags = $self->sql_fragments;
         
     return $self->error_msg( missing => 'source table(s)' )
         unless $frags->{ from };
         
-    $frags->{ select } ||= '*';
     my @sql;
 
     # TODO: determine signature for query so we can see if there's a 
