@@ -184,7 +184,7 @@ sub AUTOLOAD {
     return if $name eq 'DESTROY';
 
     # don't AUTOLOAD class methods
-    return $self->error_msg( class_autoload => $name, (caller())[1,2]) 
+    return __PACKAGE__->error_msg( class_autoload => $name, (caller())[1,2])
         unless ref $self;
     
     # if we've got a table then we can ask it if it can generate a method 

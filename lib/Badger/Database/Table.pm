@@ -448,13 +448,16 @@ sub fetch_all {
                 where => $where,
                 order => "ORDER BY $order",
             );
+            $self->debug("prepared meta-query for ordered fetch (query:order): ", $query->sql) if DEBUG;
         }
         else {
             $query = $self->prepare_meta_query( 
                 fetch => \@fields, 
                 where => $where,
             );
+            $self->debug("prepared meta-query for unordered fetch (query:fetch): ", $query->sql) if DEBUG;
         }
+
         
         $rows = $query->rows( @$args{ @fields } ) 
             || return $self->not_found( $args, @fields );

@@ -62,10 +62,10 @@ sub fetch {
     my $self = shift;
     my $meta = $self->meta;
 
-    $self->debug("Fetching many relation [$meta->{ fkey } => $meta->{ id }]\n") if DEBUG;
+    $self->debug("Fetching many relation from $meta->{ table }->{ table } [$meta->{ fkey } => $meta->{ id }]\n") if DEBUG;
 
     my $items = $meta->{ table }->fetch_all({
-        $meta->{ fkey } => $meta->{ id },
+        $meta->{ fkey  } => $meta->{ id },
         $meta->{ where } ? %{ $meta->{ where } } : (),
         $meta->{ order } ? (order => $meta->{ order }) : ()
     });
