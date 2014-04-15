@@ -91,7 +91,7 @@ sub init_model {
 
     # create a model to manage any table definitions
     $config->{ model } = $self->new_model($config);
-    $self->debug("model now set to $config->{model}") if DEBUG or 1;
+    $self->debug("model now set to $config->{model}") if DEBUG;
 }
 
 sub engine {
