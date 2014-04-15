@@ -219,6 +219,21 @@ sub records {
     return [ map { $self->record($_) } @$args ];
 }
 
+sub row_record {
+    my $self = shift;
+    my $row  = $self->row(@_) || return;
+    return $self->record($row);
+}
+
+
+sub rows_records {
+    my $self = shift;
+    my $rows = $self->rows(@_) || return;
+    return @$rows
+        ? $self->records($rows)
+        : $rows;        # an empty list of rows === an empty list of records
+}
+
 sub fragments {
     my $self = shift;
 

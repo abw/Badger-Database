@@ -31,8 +31,9 @@ use Badger::Factory::Class
     words        => 'ARRAY HASH',
     import       => 'class',
     constant     => {
-        AUTOGEN  => '_autogen',
-        IS_NAME  => qr/^\w+$/,
+        AUTOGEN      => '_autogen',
+        IS_NAME      => qr/^\w+$/,
+        SQL_WILDCARD => '%',
     },
     config       => [
        'engine|class:ENGINE!',                           # mandatory engine object
@@ -225,11 +226,29 @@ sub prepare_meta_query {
 }
 
 
-sub prepare_sql {
-#    goto &expand_fragments;
-    shift->expand_fragments(@_);
+sub wildcard_starting {
+    my ($self, $value) = @_;
+    return $value . SQL_WILDCARD;
 }
 
+sub wildcard_containing {
+    my ($self, $value) = @_;
+    return SQL_WILDCARD . $value . SQL_WILDCARD;
+}
+
+sub wildcard_ending {
+    my ($self, $value) = @_;
+    return SQL_WILDCARD . $value;
+}
+
+
+#-----------------------------------------------------------------------------
+# SQL generation
+#-----------------------------------------------------------------------------
+
+sub prepare_sql {
+    shift->expand_fragments(@_);
+}
 
 sub expand_fragments {
     my $self   = shift;
@@ -286,26 +305,26 @@ sub column {
     $self->query($query)->column(@_);
 }
 
-
 sub dbh {
     shift->engine->dbh;
 }
 
 
+#-----------------------------------------------------------------------------
+# Transactions
+#-----------------------------------------------------------------------------
+
 sub begin_work {
     shift->dbh->begin_work
 }
-
 
 sub commit {
     shift->dbh->commit
 }
 
-
 sub rollback {
     shift->dbh->rollback
 }
-
 
 sub transaction {
     my $self  = shift;
