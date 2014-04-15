@@ -4,7 +4,7 @@
 #
 # DESCRIPTION
 #   Subclass of Badger::Relation::Map which adds a value field, which
-#   means we can provide a more convenient way to get/set attribute 
+#   means we can provide a more convenient way to get/set attribute
 #   values (for example).
 #
 # AUTHOR
@@ -14,34 +14,39 @@
 
 package Badger::Database::Relation::Hash;
 
+use Badger::Class
+    version  => 0.03,
+    debug    => 0,
+    base     => 'Badger::Database::Relation::Map',
+    messages => {
+        no_value => 'No value field defined',
+    };
+
+
 use strict;
 use warnings;
 use base 'Badger::Database::Relation::Map';
 
 our $VERSION   = 0.02;
 our $DEBUG     = 0 unless defined $DEBUG;
-our $MESSAGES  = { 
-    no_index => 'No index field defined',
+our $MESSAGES  = {
 };
 
 sub init {
     my ($hash, $config) = @_;
     my $self = $hash->self();
 
-    $self->{ id } = $config->{ id }
-        || return $hash->error_msg('no_id');
-
     $self->{ table } = $config->{ table }
         || return $hash->error_msg('no_table');
-        
-    $self->{ fkey } = $config->{ fkey }
-        || $self->{ table }->key();
 
     $self->{ index } = $config->{ index }
         || $self->error_msg('no_index');
 
     $self->{ value } = $config->{ value }
-        || $self->error_msg( no_field => 'value' );
+        || $self->error_msg('no_value');
+
+    $meta->{ id    } = $self->init_local_key($config);
+    $meta->{ fkey  } = $self->init_remote_key($config);
 
     $hash->fetch() if $config->{ fetch };
 }
@@ -95,4 +100,3 @@ __END__
 # End:
 #
 # vim: expandtab shiftwidth=4:
-

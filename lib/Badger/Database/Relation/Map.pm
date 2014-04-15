@@ -39,18 +39,14 @@ sub init {
     my ($self, $config) = @_;
     my $meta = $self->meta;
 
-    $meta->{ id } = $config->{ id }
-        || return $self->error_msg('no_id');
-
     $meta->{ table } = $config->{ table }
         || return $self->error_msg('no_table');
-        
-    $meta->{ fkey } = $config->{ fkey }
-        || $meta->{ table }->key();
 
     $meta->{ index } = $config->{ index }
         || return $self->error_msg('no_index');
 
+    $meta->{ id    } = $self->init_local_key($config);
+    $meta->{ fkey  } = $self->init_remote_key($config);
     $meta->{ where } = $config->{ where };
 
     $self->fetch if $config->{ fetch };
@@ -65,7 +61,7 @@ sub fetch {
     $self->debug("Fetching hash relation [$meta->{ fkey } => $meta->{ id }]\n") if $DEBUG;
 
     my $attrs = $meta->{ table }->fetch_all({
-        $meta->{ fkey  } => $meta->{ id }, 
+        $meta->{ fkey  } => $meta->{ id },
         $meta->{ where } ? %{ $meta->{ where } } : (),
     });
     foreach my $attr (@$attrs) {
@@ -88,12 +84,12 @@ sub insert {
     if (my $where = $meta->{ where }) {
         @$args{ keys %$where } = values %$where;
     }
-    
+
     $self->debug("insert: ", $self->dump_data($args), "\n") if DEBUG;
 
     my $item = $meta->{ table }->create($args);
     $self->{ $item->$index } = $item;
-    
+
     return $item
 }
 
@@ -138,4 +134,3 @@ __END__
 # End:
 #
 # vim: expandtab shiftwidth=4:
-

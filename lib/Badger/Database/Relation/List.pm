@@ -36,13 +36,13 @@ sub fetch {
     $self->debug("Fetching list relation [$meta->{ fkey } => $meta->{ id }] index: $meta->{ index })\n") if DEBUG;
 
     my $items = $meta->{ table }->fetch_all({
-        $meta->{ fkey } => $meta->{ id }, 
+        $meta->{ fkey } => $meta->{ id },
         order           => $meta->{ index },
         $meta->{ where } ? %{ $meta->{ where } } : (),
     });
 
     @$self = @$items;
-    
+
     return $self;
 }
 
@@ -53,7 +53,7 @@ sub insert {
     my $args  = @_ && ref $_[0] eq HASH ? shift : { @_ };
     my $index = $meta->{ index };
     my ($offset, $item);
-    
+
     # add the foreign key value pointing back to our parent id
     $args->{ $meta->{ fkey } } = $meta->{ id };
 
@@ -82,7 +82,7 @@ sub insert {
     }
     # otherwise we add it at the end of the list
     $args->{ $index } = @$self;
-    
+
     $self->debug("inserting ", $meta->{ table }->table, " list item: ", $self->dump_data($args)) if DEBUG;
     $item = $meta->{ table }->insert($args);
     CORE::push(@$self, $item);
@@ -98,7 +98,7 @@ sub insert {
 sub add {
     my $self = shift;
     my $meta = $self->meta;
-    my $args = { 
+    my $args = {
         $meta->{ fkey } => $meta->{ id },
     };
 
@@ -120,7 +120,7 @@ sub add {
 sub remove {
     my ($self, $index) = @_;
     my @items = $self->splice($index, 1);
-    return $items[0] 
+    return $items[0]
         || $self->error_msg( not_found => $index );
 }
 
@@ -128,7 +128,7 @@ sub remove {
 sub delete {
     my ($self, $index) = @_;
     my @items = map { $_->delete() } $self->splice($index, 1);
-    return $items[0] 
+    return $items[0]
         || $self->error_msg( not_found => $index );
 }
 
@@ -198,7 +198,7 @@ sub splice {
             # ...and add $add items from the same start position
             my $count = $start;
             $self->debug("adding $add items starting at $count\n") if $DEBUG;
-            
+
             CORE::splice(@$self, $start, 0, map {
                 $self->debug("adding [$_] at $count\n") if $DEBUG;
                 $_->update( $meta->{ fkey } => $meta->{ id }, $meta->{ index } => $count++ )
@@ -211,7 +211,7 @@ sub splice {
         if $meta->{ on_change };
 
     $self->debug("    --> [", join(', ', @$self), "]\n") if $DEBUG;
-    
+
     return wantarray ? @orphans : \@orphans;
 }
 
@@ -226,22 +226,22 @@ sub renumber {
     my @where  = ($meta->{ fkey });
     my @values = ($delta, $start, $meta->{ id });
     my ($where, $qname, $query);
-    
+
     # add any where => { ... } constraints to args
     if ($where = $meta->{ where }) {
         push(@where, keys %$where);
         push(@values, values %$where);
     }
-    
+
     $where = join(' AND ', map { $_ . '=?' } @where);
     $qname = join('_', 'list_renumber', $index, @where);
     $query = "UPDATE <table> SET $index=$index+? WHERE $index>=? AND $where";
-    
+
     # TODO: generate this from a meta-query
     $table->queries->{ $qname } ||= $query;
 
     $self->debug("renumber: $qname => $query [", join(', ', @values), ']') if DEBUG;
-    
+
     $table->execute( $qname => @values );
 
     foreach my $item (@$self[$start..$#$self]) {
@@ -251,7 +251,7 @@ sub renumber {
 }
 
 
-# we can now implement the usual push(), pop(), unshift() and shift() list manipulation 
+# we can now implement the usual push(), pop(), unshift() and shift() list manipulation
 # methods in terms of append() and splice()
 
 *push = \&append;
@@ -289,4 +289,3 @@ __END__
 # End:
 #
 # vim: expandtab shiftwidth=4:
-

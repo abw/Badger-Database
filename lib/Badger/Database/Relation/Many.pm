@@ -20,7 +20,7 @@ use Badger::Class
     words    => 'HASH',
     messages => {
         out_of_bounds => 'There is no item %s in the set',
-        no_ident      => 'No id or key field specified',
+        no_ident      => 'No id or (local_)key field specified',
     };
 
 
@@ -42,19 +42,32 @@ sub init {
     my ($self, $config) = @_;
     my $meta = $self->meta;
 
-    $meta->{ id } = $config->{ id } || $config->{ key }
-        || return $self->error_msg('no_ident');
-
     $meta->{ table } = $config->{ table }
         || return $self->error_msg('no_table');
-        
-    $meta->{ fkey } = $config->{ fkey }
-        || $meta->{ table }->key;
 
+    $meta->{ id        } = $self->init_local_key($config);
+    $meta->{ fkey      } = $self->init_remote_key($config);
     $meta->{ where     } = $config->{ where };
     $meta->{ order     } = $config->{ order } || $config->{ order_by };
     $meta->{ on_change } = $config->{ on_change };
     $self->fetch if $config->{ fetch };
+}
+
+sub init_local_key {
+    my ($self, $config) = @_;
+    return $config->{ id }
+        || $config->{ key }
+        || $config->{ lkey }
+        || $config->{ local_key }
+        || $self->error_msg('no_ident');
+}
+
+sub init_remote_key {
+    my ($self, $config) = @_;
+    return $config->{ fkey }
+        || $config->{ rkey }
+        || $config->{ remote_key }
+        || $self->meta->{ table }->key;
 }
 
 
@@ -97,7 +110,7 @@ sub insert {
     # fire any callback
     $meta->{ on_change }->($self)
         if $meta->{ on_change };
-        
+
     return $item;
 }
 
@@ -108,7 +121,7 @@ sub add {
     my $meta = $self->meta;
 
     $self->debug("Adding new record in many relation [$meta->{ fkey } => $meta->{ id }]\n") if DEBUG;
-    
+
     # update new record to have foreign key pointing back to our id
     $node->update( $meta->{ fkey } => $meta->{ id } );
     push(@$self, $node);
@@ -116,14 +129,14 @@ sub add {
     # fire any callback
     $meta->{ on_change }->($self)
         if $meta->{ on_change };
-        
+
     return $self;
 }
 
 
-# I'm not sure how useful it is to extract/delete/remove items using 
+# I'm not sure how useful it is to extract/delete/remove items using
 # the list offset of the child items, when this is supposed to be an
-# unordered list...  
+# unordered list...
 
 sub extract {
     my $self = shift;
@@ -139,8 +152,8 @@ sub extract {
         push(@nodes, splice(@$self, $n, 1));
     }
 
-    return wantarray 
-        ?  @nodes 
+    return wantarray
+        ?  @nodes
         : \@nodes;
 }
 
@@ -178,10 +191,10 @@ sub delete {
     } $self->extract(@_);
 
     # fire any callback
-    
+
     $meta->{ on_change }->($self)
         if $meta->{ on_change };
-        
+
     return wantarray
         ?  @nodes
         : \@nodes;
@@ -200,7 +213,7 @@ sub delete_all {
     # fire any callback
     $meta->{ on_change }->($self)
         if $meta->{ on_change };
-        
+
     return $self;
 }
 
@@ -232,4 +245,3 @@ __END__
 # End:
 #
 # vim: expandtab shiftwidth=4:
-

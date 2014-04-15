@@ -57,7 +57,7 @@ our $GENERATORS = {
 
 our $AUTOLOAD;
 
-# all internal data items are prefixed with '_' to prevent collision 
+# all internal data items are prefixed with '_' to prevent collision
 # with any record fields.  So '_table' is our Badger::Table
 # reference and 'table' is a field that's come from a database row
 
@@ -73,14 +73,14 @@ sub model {
     return $_[0]->{ _model }
         || $_[0]->error_msg('no_model');
 }
-    
+
 sub hub {
-    return $_[0]->{ _hub } 
+    return $_[0]->{ _hub }
        ||= $_[0]->table->hub;
 }
 
 sub database {
-    return $_[0]->{ _database } 
+    return $_[0]->{ _database }
        ||= $_[0]->table->database;
 }
 
@@ -95,7 +95,7 @@ sub table {
     }
     else {
         # otherwise fetch our own table
-        return $self->{ _table }           
+        return $self->{ _table }
             || $self->error_msg('no_table');
     }
 }
@@ -130,19 +130,19 @@ sub update {
     my $self = shift;
     my $args = @_ && ref $_[0] eq 'HASH' ? shift : { @_ };
     my $key  = $self->key;
-    
+
     # add our key                       # TODO: composite keys
     $args->{ $key } = $self->{ $key };
-    
+
     # NOTE: table update() method will remove any items in $args that are not
     # listed in the table $SCHEMA->{ update } hash and will do so WITHOUT
     # WARNING!  I *think* this is the best thing, but it may need some rethink
-    $self->table->update($args) 
+    $self->table->update($args)
         || return $self->error($self->table->error());
 
-    # copy all the new values that have been updated into $self 
+    # copy all the new values that have been updated into $self
     @$self{ keys %$args } = values %$args;
-    
+
     return $self;
 }
 
@@ -186,8 +186,8 @@ sub AUTOLOAD {
     # don't AUTOLOAD class methods
     return __PACKAGE__->error_msg( class_autoload => $name, (caller())[1,2])
         unless ref $self;
-    
-    # if we've got a table then we can ask it if it can generate a method 
+
+    # if we've got a table then we can ask it if it can generate a method
     # appropriate for a humble record such as ourselves to use - the table
     # consults the schema so we get back an appropriate method that can
     # read/write/update/etc based on what the schema says.
@@ -199,9 +199,9 @@ sub AUTOLOAD {
             use Badger::Debug;
             $self->debug("AUTOLOAD asking schema for $name method\n");
         }
-        
+
         # TODO: ask the table instead?
-    
+
         if (defined ($method = $schema->{ methods }->{ $name })) {
             if ($method) {                          # set method => 0 to disable method
                 $self->debug("Found method in schema: $name\n") if $DEBUG;
@@ -228,7 +228,7 @@ sub AUTOLOAD {
             return $self->{ $name };
         }
     }
-    
+
     my ($pkg, $file, $line) = caller();
     return $self->error_msg( bad_method => $name, ref $self, $file, $line );
 }
@@ -245,8 +245,8 @@ sub generate_method {
     if (@_ == 1) {
         # SUGAR: 'delete' ==> (delete => 1) ==> (delete => { type => 'delete' })
         if    (ref $_[0] eq HASH) { $args = shift }
-        elsif (    $_[0] eq '1')  { $args = { type => $name } }   
-        else                      { $args = { type => $_[0] } }   
+        elsif (    $_[0] eq '1')  { $args = { type => $name } }
+        else                      { $args = { type => $_[0] } }
 #       else  { return $self->error_msg( bad_method_args => $name, shift ) }
     }
     else {
@@ -271,8 +271,8 @@ sub generate_read_method {
 
     unless (defined &{ $class.PKG.$name }) {
         $class->debug("generating $name() to get $item\n") if DEBUG;
-        *{ $class.PKG.$name } = sub { 
-            $_[0]->{ $item } 
+        *{ $class.PKG.$name } = sub {
+            $_[0]->{ $item }
         };
     }
 }
@@ -319,7 +319,7 @@ sub generate_link_method {
             return $_[0]->{"${name}_record"}  # cache object returned
                ||= $_[0]->table($table)->fetch(
                         $fkey  ? ($fkey => $_[0]->{ $item }) : $_[0]->{ $item },
-                        $where ? %$where : () 
+                        $where ? %$where : ()
                    );
         };
     }
@@ -327,12 +327,12 @@ sub generate_link_method {
 
 sub relation_module {
     my ($self, $type, $name) = @_;
-    my $module = $RELATIONS->{ $type } 
+    my $module = $RELATIONS->{ $type }
         || return $self->error_msg( bad_rel_type => $name || '', $type );
     class($module)->load;
     return $module;
 }
-     
+
 sub generate_relation_method {
     my $self  = shift;
     my $name  = shift;
@@ -364,9 +364,9 @@ sub generate_relation_method {
 
             return $self->{"${name}_relation"}  # cache object returned
                 ||= $module->new({
-                    %$args, 
-                    table => $table, 
-                    id    => $id, 
+                    %$args,
+                    table => $table,
+                    id    => $id,
                     fetch => 1,
                 });
         };
@@ -407,14 +407,14 @@ sub generate_delete_method {
     my $name  = shift;
     my $class = ref $self || $self;
     no strict REFS;
-    
+
     unless (defined &{ $class.PKG.$name }) {
         my $args = @_ && ref $_[0] eq 'HASH' ? shift : { @_ };
         my $key  = $self->key();
 
         $class->debug("generating $name() to delete record\n") if $DEBUG;
 
-        *{ $class.PKG.$name } = sub { 
+        *{ $class.PKG.$name } = sub {
             my $self = shift;
             my $key  = $self->key();
             # TODO: chained delete
@@ -436,7 +436,7 @@ Badger::Database::Record - base class database record object
 
     package Badger::Widget;
     use base 'Badger::Database::Record';
-    
+
     __PACKAGE__->generate_methods({
         read  => 'id, name, title, price'
         write => 'stock',
@@ -446,14 +446,14 @@ Badger::Database::Record - base class database record object
 =head1 DESCRIPTION
 
 This module implements a base class object for representing active
-database records.  It is designed to be subclassed to create objects 
+database records.  It is designed to be subclassed to create objects
 to represent records from different database tables.
 
     package Badger::Widget;
     use base 'Badger::Database::Record';
 
 You can add your own methods to implement whatever functionality your
-entities require.  
+entities require.
 
     sub flibble {
         my $self = shift;
@@ -461,7 +461,7 @@ entities require.
     }
 
 For methods that are simply returning or updating internal values, or referencing
-other entities in the data model, you can use the L<generate_methods()> method to 
+other entities in the data model, you can use the L<generate_methods()> method to
 generate the methods for you.
 
     __PACKAGE__->generate_methods({
@@ -516,10 +516,10 @@ objects (e.g. C<Your::Record::User>) for you.
 
     # get the data model object
     my $model = Badger->model();
-    
+
     # get the users table object
     my $users = $model->users();
-    
+
     # create a new user record
     my $user = $users->create( %data );
 
@@ -541,7 +541,7 @@ L<model()> method.
 =head2 commit()
 
 Not yet implemented.  Will eventually provide the mechanism for
-commiting changes to the object back to the database.  
+commiting changes to the object back to the database.
 
 =head2 rollback()
 
@@ -550,7 +550,7 @@ reverting an object back to the values stored in the database.
 
 =head2 generate_read_method($name,$item)
 
-Generates a method called C<$name> which provides read-only access to the 
+Generates a method called C<$name> which provides read-only access to the
 internal C<$item>.  For example, consider the following method call.
 
     $record->generate_read_method( foo => 'the_foo_item' );
@@ -560,14 +560,14 @@ This generates a method equivalent to:
     sub foo {
         return $_[0]->{ the_foo_item };
     }
-    
+
 =head2 generate_read_methods($methods)
 
-Calls L<generate_read_method()> 
+Calls L<generate_read_method()>
 
 =head2 generate_write_method($name,$item)
 
-Generates a method called C<$name> which provides read/write access to the 
+Generates a method called C<$name> which provides read/write access to the
 internal C<$item>.  For example, consider the following method call.
 
     $record->generate_write_method( foo => 'the_foo_item' );
@@ -582,7 +582,7 @@ This generates a method equivalent to:
 It is important to note that this method I<only> updates the object's internal
 copy of the data.  It does I<not> commit any changes back to the database.
 
-NOTE: we may want to change this to mark the item as 'dirty' so that a 
+NOTE: we may want to change this to mark the item as 'dirty' so that a
 subsequent commit() can commit any changed fields.
 
 =head2 generate_link_method($name,$item,$table)
@@ -614,9 +614,9 @@ subclass) name.
 
     package Badger::Widget;
     use base 'Badger::Database::Record';
-    
-    # shorthand for Badger::Widget->generate_methods(...)    
-    __PACKAGE__->generate_methods({ 
+
+    # shorthand for Badger::Widget->generate_methods(...)
+    __PACKAGE__->generate_methods({
         read  => 'id, name, title, price'
         write => 'stock',
         link  => 'merchant',
@@ -661,7 +661,7 @@ identifier.
 
     print $widget->merchant_id();   # 98765
 
-The C<merchant()> method returns a C<Badger::Merchant> object for the 
+The C<merchant()> method returns a C<Badger::Merchant> object for the
 merchant with id C<98765>.
 
     my $merchant = $widget->merchant();
@@ -676,7 +676,7 @@ For example, if the object has an item stored internally as C<date> that you
 want to access via a C<timestamp()> read-only method then you would write the
 following:
 
-    __PACKAGE__->generate_methods({ 
+    __PACKAGE__->generate_methods({
         read  => 'timestamp(date)'
     });
 
@@ -686,7 +686,7 @@ C<order_no()> and C<order_id()> methods both return the same thing, that is
 the interal C<order_no> value. The C<order()> method returns C<Badger::Order>
 object for the current C<order_no>.
 
-    __PACKAGE__->generate_methods({ 
+    __PACKAGE__->generate_methods({
         read  => 'order_no',
         link  => order(order_no),
     });
@@ -715,4 +715,3 @@ L<Badger::Database::Model>, L<Badger::Database::Table>.
 # End:
 #
 # vim: expandtab shiftwidth=4:
-
