@@ -1,16 +1,3 @@
-#========================================================================
-#
-# Badger::Database::Engine::Mysql
-#
-# DESCRIPTION
-#   Subclass of Badger::Database::Engine which implements methods 
-#   specific to MySQL
-#
-# AUTHOR
-#   Andy Wardley   <abw@wardley.org>
-#
-#========================================================================
-
 package Badger::Database::Engine::Mysql;
 
 use Badger::Class
@@ -63,23 +50,25 @@ sub connect {
         my $row = $self->query( GET_WAIT_TIMEOUT )->fetchrow_hashref;
         $self->debug_msg( timeouts => $row->{ gtime }, $row->{ stime } );
     }
-    
+
+    #-----------------------------------------------------------------------------
     # NOTE: I believe this is the cause of the MySQL reconnect problem.
     # I disabled the mysql auto-reconnect feature and then coded my own
     # fallback out of the loop, by having Badger::Database::Query call
     # the engine execute() method instead of query()
-    
-    # usual behaviour is to reconnect automatically, but we might want to 
+    #
+    # usual behaviour is to reconnect automatically, but we might want to
     # disable it (e.g. for testing/debugging)
-#    $self->{ dbh }->{ mysql_auto_reconnect } = 0 
-#        unless $self->{ reconnect };
-
+    #
+    #    $self->{ dbh }->{ mysql_auto_reconnect } = 0
+    #        unless $self->{ reconnect };
+    #
     # turn this on once I'm convinced that I can reproduce and squash the bug
     # UPDATE: doesn't seem to help. Still kill processes
-#    $self->{ dbh }->{ mysql_auto_reconnect } = 1;
+    #
+    #    $self->{ dbh }->{ mysql_auto_reconnect } = 1;
+    #-----------------------------------------------------------------------------
 
-#    $self->debug("reconnect flag: ", $self->{ dbh }->{ mysql_auto_reconnect });
-    
     return $self;
 }
 
@@ -94,14 +83,14 @@ sub execute_query {
         " args: ", join(', ', map { defined $_? $_ : UNDEF } @_), "\n",
         "  sth: $sth\n"
     ) if DEBUG;
-    
+
      # work around MySQL server going away when using TCP/IP socket
     unless ($self->try( execute => $sth, @_ )) {
         my $error = $sth->err;
 #        local $DEBUG = 1;
 
         $self->debug("DBI execute failed: $error\n") if $DEBUG;
-        
+
         # The MySQL server connection went away
         if (($error == MYSQL_SERVER_GONE) || ($error == MYSQL_SERVER_LOST)) {
             $self->debug("MySQL server went away - reconnecting\n") if $DEBUG;
@@ -109,9 +98,9 @@ sub execute_query {
             $self->debug("Re-preparing query\n") if $DEBUG;
             $sth = $query->prepare;
             $self->debug("Re-submitting query\n") if $DEBUG;
-            $self->execute($sth, @_) 
+            $self->execute($sth, @_)
                 || return $self->error_msg( dbi => execute => $sth->errstr );
-        } 
+        }
         else {
             $self->debug("DBI execute failed") if $DEBUG;
             return $self->error_msg( dbi => execute => $sth->errstr, $query->sql );
@@ -128,7 +117,7 @@ sub insert_id {
     return $sth->{ mysql_insertid }
         if $sth && $sth->{ mysql_insertid };
 
-    my $dbh = $self->{ dbh } 
+    my $dbh = $self->{ dbh }
         || return $self->error_msg(no_dbh);
 
     return $dbh->{ mysql_insertid }
@@ -162,7 +151,7 @@ providing methods specific to the MySQL database.
 
 =head1 CONFIGURATION OPTIONS
 
-The following configuration option is available in addition to those 
+The following configuration option is available in addition to those
 inherited from the L<Badger::Database::Engine> base class.
 
 =head2 reconnect
@@ -175,14 +164,14 @@ automatically for some reason.
 
 =head1 METHODS
 
-This module inherits all the method from the L<Badger::Database::Engine> 
+This module inherits all the method from the L<Badger::Database::Engine>
 base class.  The following methods are redefined to implement behaviours
 specific to MySQL.
 
 =head2 connect()
 
 This method connects the engine to the database.  It adds some extra
-functionality to handle reconnection to the MySQL server if necessary. 
+functionality to handle reconnection to the MySQL server if necessary.
 
 =head2 dsn()
 
@@ -191,11 +180,11 @@ Notation) in the required format for MySQL.
 
 =head2 query()
 
-This method overrides the default method in the base class.  It adds 
+This method overrides the default method in the base class.  It adds
 additional checking for the case where the MySQL server can "go away"
 after a period of inactivity across a TCP/IP connection.  If the query
 fails to execute due to the "MySQL server has gone away" problem, then
-the method will automatically reconnect the engine to the server and 
+the method will automatically reconnect the engine to the server and
 re-submit the query.
 
 =head2 insert_id()
@@ -209,15 +198,15 @@ Andy Wardley L<http://wardley.org/>.
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2009 Andy Wardley.  All Rights Reserved.
+Copyright (C) 2005-2014 Andy Wardley.  All Rights Reserved.
 
 This module is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
 
 =head1 SEE ALSO
 
-L<Badger::Database>, 
-L<Badger::Database::Engine>, 
+L<Badger::Database>,
+L<Badger::Database::Engine>,
 L<Badger::Database::Engines>.
 
 =cut
@@ -229,4 +218,3 @@ L<Badger::Database::Engines>.
 # End:
 #
 # vim: expandtab shiftwidth=4:
-

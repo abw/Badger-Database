@@ -1,16 +1,3 @@
-#========================================================================
-#
-# Badger::Database::Engine::Postgres
-#
-# DESCRIPTION
-#   Subclass of Badger::Database::Engine which implements methods 
-#   specific to Postgres
-#
-# AUTHOR
-#   Andy Wardley   <abw@wardley.org>
-#
-#========================================================================
-
 package Badger::Database::Engine::Postgres;
 
 use Badger::Class
@@ -48,12 +35,12 @@ sub dsn {
 sub insert_id {
     my ($self, $table, $field) = @_;
 
-    my $dbh = $self->{ dbh } 
+    my $dbh = $self->{ dbh }
         || return $self->error_msg(no_dbh);
 
     # default sequence name is <table>_<field>_seq, e.g. users_id_seq
-    return $dbh->last_insert_id( 
-        undef, undef, undef, undef, 
+    return $dbh->last_insert_id(
+        undef, undef, undef, undef,
         { sequence => join('_', $table, $field, 'seq') }
     ) || $self->error_msg( insert_id => $table, $field, $dbh->errstr );
 }
@@ -84,7 +71,7 @@ providing methods specific to the Postgres database.
 
 =head1 METHODS
 
-This module inherits all the method from the L<Badger::Database::Engine> 
+This module inherits all the method from the L<Badger::Database::Engine>
 base class.  The following methods are redefined to implement behaviours
 specific to Postgres.
 
@@ -100,7 +87,7 @@ inserted record.
 
 =head1 WARNING
 
-This engine hasn't been tested properly since being integrated into 
+This engine hasn't been tested properly since being integrated into
 the C<Badger::Database> distribution.  It worked the last time I used
 it in anger a few years back now, but it's been repackaged and refactored
 a bit since then so there could be lurking problems.
@@ -118,8 +105,8 @@ under the same terms as Perl itself.
 
 =head1 SEE ALSO
 
-L<Badger::Database>, 
-L<Badger::Database::Engine>, 
+L<Badger::Database>,
+L<Badger::Database::Engine>,
 L<Badger::Database::Engines>.
 
 =cut
@@ -131,4 +118,3 @@ L<Badger::Database::Engines>.
 # End:
 #
 # vim: expandtab shiftwidth=4:
-

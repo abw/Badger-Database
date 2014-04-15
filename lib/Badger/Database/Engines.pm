@@ -1,16 +1,3 @@
-#========================================================================
-#
-# Badger::Database::Engines
-#
-# DESCRIPTION
-#   Factory module for locating, loading and instantiating database
-#   engine objects.
-#
-# AUTHOR
-#   Andy Wardley   <abw@wardley.org>
-#
-#========================================================================
-
 package Badger::Database::Engines;
 
 use Badger::Factory::Class
@@ -20,12 +7,12 @@ use Badger::Factory::Class
     path    => 'Badger::Database::Engine BadgerX::Database::Engine',
     words   => 'HASH',
     engines => {
-        # alternate names/cases 
+        # alternate names/cases
         pg     => 'Badger::Database::Engine::Postgres',
         sqlite => 'Badger::Database::Engine::SQLite',
     };
 
-    
+
 sub type_args {
     my $self = shift;
     my $type = shift;
@@ -34,7 +21,7 @@ sub type_args {
     # single scalar value is assumed to be database name
     $args = { database => $args }
         unless ref $args eq HASH;
-    
+
     return ($type, $args);
 }
 
@@ -49,7 +36,7 @@ Badger::Database::Engines - factory module for database engines
 
     use Badger::Database::Engines;
 
-    my $engine = Engines->engine( 
+    my $engine = Engines->engine(
         mysql => {
             database => 'test',
             username => 'test',
@@ -62,7 +49,7 @@ Badger::Database::Engines - factory module for database engines
 =head1 DESCRIPTION
 
 This module is a factory for creating L<Badger::Database::Engine> objects.
-It is a subclass of L<Badger::Factory> which implements most of the 
+It is a subclass of L<Badger::Factory> which implements most of the
 functionality required to locate, load and instantiate database engines.
 
 The L<engine()> method will locate, load and instantiate a database engine
@@ -98,8 +85,8 @@ new L<Badger::Database::Engines> object.
 
     my $engines = Badger::Database::Engines->new;
 
-You can specify any additional engine mappings using the L<engines> 
-parameter.    
+You can specify any additional engine mappings using the L<engines>
+parameter.
 
     my $engines = Badger::Database::Engines->new(
         engines => {
@@ -138,7 +125,7 @@ to be the database name and is coerced to a hash reference.
     my $engine = $engines->engine(
         mysql => 'testdb'
     );
-    
+
     # ...for this
     my $engine = $engines->engine(
         mysql => {
@@ -162,15 +149,15 @@ to specify the database connection parameters as a single string (the database
 name) which it coerces to a hash reference.
 
     # this is syntactic sugar...
-    my $engine = $engines->engine( 
-        mysql => 'testdb' 
+    my $engine = $engines->engine(
+        mysql => 'testdb'
     );
-    
+
     # ...for this
-    my $engine = $engines->engine( 
-        mysql => { 
-            database => 'testdb' 
-        } 
+    my $engine = $engines->engine(
+        mysql => {
+            database => 'testdb'
+        }
     );
 
 =head1 AUTHOR
@@ -179,15 +166,15 @@ Andy Wardley L<http://wardley.org/>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2009 Andy Wardley.  All Rights Reserved.
+Copyright (C) 2005-2014 Andy Wardley.  All Rights Reserved.
 
 This module is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
 
 =head1 SEE ALSO
 
-L<Badger::Database>, 
-L<Badger::Database::Engine>, 
+L<Badger::Database>,
+L<Badger::Database::Engine>,
 L<Badger::Database::Engine::Mysql>,
 L<Badger::Database::Engine::Postgres>,
 L<Badger::Database::Engine::SQLite>.

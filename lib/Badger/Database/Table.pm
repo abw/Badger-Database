@@ -30,19 +30,19 @@ use Badger::Class
     },
     config      => [
         'table|name|class:TABLE:NAME!',
-        'id|serial|class:ID:SERIAL',
-        'keys|key|class:KEY:KEYS',
-        'fields|class:FIELDS',
+        'id|id_field|serial|class:ID:SERIAL',
+        'keys|key|key_field|key_fields|class:KEY:KEYS',
+        'fields|selectable|class:FIELDS',
         'valid|class:VALID',
-        'update|class:UPDATE',
-        'record|class:RECORD',
+        'update|updateable|class:UPDATE',
+        'record|record_module|class:RECORD',
         'record_base|method:RECORD',
 #       'columns|class:COLUMNS',            # TODO
     ];
 
 
-our @SCHEMA_KEYS = qw( 
-    table record key keys field fields columns valid update methods 
+our @SCHEMA_KEYS = qw(
+    table record key keys field fields columns valid update methods
 );
 
 our $QUERIES = {
@@ -60,6 +60,16 @@ our $META_QUERIES = {
 *name = \&table;
 
 sub init {
+    my ($self, $config) = @_;
+
+    # Initialise the table schema
+    $self->init_schema($config);
+
+    # Let the Badger::Database::Queries base class initialiase queries
+    $self->init_queries($config);
+}
+
+sub init_schema {
     my ($self, $config) = @_;
     my $class  = $self->class;
     my $schema = $class->hash_vars(SCHEMA);
@@ -79,8 +89,8 @@ sub init {
 
     # mandatory database handle...
     my $engine = $self->{ engine } = $config->{ engine }
-        || ( $model 
-                ? $model->engine 
+        || ( $model
+                ? $model->engine
                 : $self->error_msg( no_engine => $self->{ table } )
            );
 
@@ -99,10 +109,10 @@ sub init {
 
     # other non-key fields
     my $fields = $self->{ fields } || [ ];
-    $fields = [ split DELIMITER, $fields ] unless ref $fields eq ARRAY; 
+    $fields = [ split DELIMITER, $fields ] unless ref $fields eq ARRAY;
     $self->{ fields } = $fields;
 
-    # fields we're allowed to update, we store a list in 'updates' (note 
+    # fields we're allowed to update, we store a list in 'updates' (note
     # plural, in keeping with 'keys', 'fields', etc) and also have an 'update'
     # hash table (along with 'key', 'field', etc') for fast set inclusion tests
     my $updates = $self->{ update } || [ ];
@@ -121,7 +131,7 @@ sub init {
     $self->{ columns } = [ @$keys, @$fields ];
 
     $self->debug("valid keys: ", $self->dump_data($self->{ valid })) if DEBUG;
-    
+
     # The class name of the record object that we turn database records into
     my $record = $self->{ record };
     if ($record) {
@@ -131,13 +141,13 @@ sub init {
             class($record)->load;
         }
         # Trying out idea to allow record to define a Badger::Class config
-        #        elsif (ref $record eq HASH) 
+        #        elsif (ref $record eq HASH)
         #            my $recparams = $record;
         #            $record = delete $recparams->{ class } || $self->record_subclass($self->{ table });
         #            my $rclass = class($record);
         #            $recparams->{ base } ||= $self->{ record_base };
         #            $rclass->export($rclass->name, [ %$recparams ]);
-        #        
+        #
         else {
             return $self->error_msg( bad_record => $self->{ table }, $record );
         }
@@ -148,24 +158,21 @@ sub init {
         class($record)->base( $self->{ record_base } );
     }
     $self->{ record } = $record;
-    
+
     # any methods we want auto-generated for the record class are inherited
     # from all base classes, making it possible to create a restricted base
-    # class table with limited record methods, which can be subclassed to 
+    # class table with limited record methods, which can be subclassed to
     # add further methods for more permissive usage.
-    $self->{ methods } = $class->hash_vars( 
-        METHODS => $config->{ methods } 
+    $self->{ methods } = $class->hash_vars(
+        METHODS => $config->{ methods }, $config->{ relations }
     );
 
-    # let the Badger::Database::Queries base class initialiase queries
-    $self->init_queries($config);
-    
     return $self;
 }
 
 sub schema {
     my $self = shift;
-    return $self->{ schema } ||= { 
+    return $self->{ schema } ||= {
         map { ($_, $self->{ $_ }) }
         @SCHEMA_KEYS
     };
@@ -174,16 +181,16 @@ sub schema {
 sub record_subclass {
     my ($self, $table) = @_;
 
-    # generate the name of a subclass of the record_base class with a unique 
-    # name based on the names of the database and table, 
+    # generate the name of a subclass of the record_base class with a unique
+    # name based on the names of the database and table,
     #   e.g. Badger::Database::Record::_autogen::mydb::users
 
-    join( 
-        PKG, 
-        $self->{ record_base }, 
-        AUTOGEN, 
-        $self->{ engine }->safe_name, 
-        $table 
+    join(
+        PKG,
+        $self->{ record_base },
+        AUTOGEN,
+        $self->{ engine }->safe_name,
+        $table
     );
 }
 
@@ -198,7 +205,7 @@ sub record {
     # A record could have an auto-stringification/numification operator
     # overloaded which returns a false result
     my $result = $record->new($args);
-    
+
     return defined $result
         ? $result
         : $self->error_msg( new_record => $record, $record->error );
@@ -212,12 +219,12 @@ sub records {
 
 sub fragments {
     my $self = shift;
-    
-    # If called with multiple arguments then we delegate to the fragments() 
-    # method in the Badger::Database::Queries subclass, which is a regular 
-    # hash accessor/mutator method generated by Badger::Class::Methods.  
+
+    # If called with multiple arguments then we delegate to the fragments()
+    # method in the Badger::Database::Queries subclass, which is a regular
+    # hash accessor/mutator method generated by Badger::Class::Methods.
     # This will update the $self->{ fragments }, but we need to make sure
-    # that we regenerate the $self->{ all_fragments } which contains 
+    # that we regenerate the $self->{ all_fragments } which contains
     # additional fragments specific to the the table.
     if (@_) {
         $self->SUPER::fragments(@_);
@@ -227,12 +234,12 @@ sub fragments {
     return $self->{ all_fragments } ||= do {
         my $table_frags  = $self->table_fragments;
         my $config_frags = $self->{ fragments };
-        my $merged_frags = {   
+        my $merged_frags = {
             %$table_frags,
             %$config_frags,
         };
         $self->debug(
-            "Merged all fragments: ", 
+            "Merged all fragments: ",
             $self->dump_data($merged_frags)
         ) if DEBUG;
         $merged_frags;
@@ -250,11 +257,11 @@ sub table_fragments {
             id          => $self->{ id },
             keys        => join(', ', @$keys),
             fields      => join(', ', @$fields),
-            columns     => join(', ', map { "`$_`" } @$keys, @$fields), 
-            tcolumns    => join(', ', map { "`$table`.`$_`" } @$keys, @$fields), 
+            columns     => join(', ', map { "`$_`" } @$keys, @$fields),
+            tcolumns    => join(', ', map { "`$table`.`$_`" } @$keys, @$fields),
             '?keys'     => join(', ', map { '?' } @$keys),
             '?fields'   => join(', ', map { '?' } @$fields),
-            '?columns'  => join(', ', map { '?' } @$keys, @$fields), 
+            '?columns'  => join(', ', map { '?' } @$keys, @$fields),
             'keys=?'    => join(' AND ', map { "$_=?" } @$keys),
         };
         $frags->{ key   } = $frags->{ keys };
@@ -268,19 +275,19 @@ sub query_params {
     my $params;
 
     # Note sure about this... it's really a special case for select so we
-    # can write $table->select('id,name') as short-hand for 
+    # can write $table->select('id,name') as short-hand for
     # $table->select( columns => 'id,name' ).  Oh well, I'll leave it for
     # now and see how it pans out in testing...
-    
+
     if (@_ == 1) {
-        $params = ref $_[0] eq HASH 
+        $params = ref $_[0] eq HASH
             ? shift
             : { columns => shift };
     }
     else {
         $params = { @_ };
     }
-    
+
     $params->{ table } ||= $self->{ table };
 
     return $params;
@@ -303,8 +310,8 @@ sub insert {
 
     $self->debug("valid fields for insert: ", join(', ', @fields), "\n") if DEBUG;
 
-    my $query = $self->prepare_meta_query( 
-        insert => \@fields, 
+    my $query = $self->prepare_meta_query(
+        insert => \@fields,
         fields => join(', ', @fields),
         values => join(', ', ('?') x scalar(@fields)),
     );
@@ -318,15 +325,15 @@ sub insert {
 }
 
 *inserted = \&record;
-    
+
 sub insert_id {
     my $self = shift;
 
     return $self->error_msg(no_id)
         unless $self->{ id };
-    
+
     return $self->{ engine }->insert_id(
-        $self->{ table }, 
+        $self->{ table },
         $self->{ id },
         @_
     );
@@ -352,13 +359,13 @@ sub update {
     # to identify the record to update)
     @fields = grep { $update->{ $_ } && ! $self->{ key }->{ $_ } } keys %$args;
 
-    return $self->error_msg( no_fields => update => $self->{ table } ) 
+    return $self->error_msg( no_fields => update => $self->{ table } )
         unless @fields;
 
     @values = @$args{ @fields, @keys };
 
-    my $query  = $self->prepare_meta_query( 
-        update => [@fields, @keys], 
+    my $query  = $self->prepare_meta_query(
+        update => [@fields, @keys],
         set    => join(', ', map { "$_=?" } @fields),
         where  => $self->where_clause(@keys),
     );
@@ -387,8 +394,8 @@ sub delete {
 
     $self->debug_method( delete => $args ) if DEBUG;
 
-    my $query  = $self->prepare_meta_query( 
-        delete => $keys, 
+    my $query  = $self->prepare_meta_query(
+        delete => $keys,
         where  => $self->where_clause(@$keys),
     );
 
@@ -406,14 +413,14 @@ sub fetch {
     my $args    = $self->method_args( fetch => @_ );
     my @fields  = $self->method_fields( fetch => $args );
     my $table   = $self->{ table };
-    my $query   = $self->prepare_meta_query( 
-        fetch   => \@fields, 
+    my $query   = $self->prepare_meta_query(
+        fetch   => \@fields,
         where   => $self->where_clause(@fields),
     );
 
     $self->debug("fetch query: ", $query->sql, @$args{ @fields }) if DEBUG;
-    
-    my $row     = $query->row( @$args{ @fields } ) 
+
+    my $row     = $query->row( @$args{ @fields } )
         || return $self->not_found( $args, @fields );
 
     return $self->record($row);
@@ -434,16 +441,16 @@ sub fetch_all {
     my ($query, $rows, $order, $oname, $where);
 
     if (@fields) {
-        # TODO: handle order/group properly - or delegate to query at a 
+        # TODO: handle order/group properly - or delegate to query at a
         # higher/deeper level
 
         $where = $self->where_clause(@fields);
-    
+
         if ($order = $args->{ order }) {
-            $oname = $order; 
+            $oname = $order;
             $oname =~ s/\W+/_/g;   # allow for "fieldname DESC"
             $oname = "_order=$oname";
-            $query = $self->prepare_meta_query( 
+            $query = $self->prepare_meta_query(
                 order => [@fields, $oname],
                 where => $where,
                 order => "ORDER BY $order",
@@ -451,21 +458,21 @@ sub fetch_all {
             $self->debug("prepared meta-query for ordered fetch (query:order): ", $query->sql) if DEBUG;
         }
         else {
-            $query = $self->prepare_meta_query( 
-                fetch => \@fields, 
+            $query = $self->prepare_meta_query(
+                fetch => \@fields,
                 where => $where,
             );
             $self->debug("prepared meta-query for unordered fetch (query:fetch): ", $query->sql) if DEBUG;
         }
 
-        
-        $rows = $query->rows( @$args{ @fields } ) 
+
+        $rows = $query->rows( @$args{ @fields } )
             || return $self->not_found( $args, @fields );
     }
     else {
         # return all rows if there are no (valid) search fields defined
         $self->debug("fetch_all() fetching all records\n") if $DEBUG;
-        $rows = $self->rows('fetch_all') 
+        $rows = $self->rows('fetch_all')
             || return $self->decline_msg( not_found => $self->{ table } => 'fetch_all' );
     }
 
@@ -521,17 +528,17 @@ sub method_key_values {
     my ($self, $method, $args)  = @_;
     my $keys = $self->{ keys };
     my ($key, $value, @values);
-    
+
     return $self->error_msg( no_ident => $method => $self->{ table } )
         unless @$keys;
-    
+
     # return a value from $args foreach $key in keys
     foreach $key (@$keys) {
         return $self->error_msg( no_param => $key => $method => $self->{ table } )
             unless defined ($value = $args->{ $key });
         push(@values, $value);
     }
-    
+
     return wantarray
         ?  @values
         : \@values;
@@ -546,14 +553,14 @@ sub method_fields {
 
     return $self->error_msg( no_fields => $method => $self->{ table } )
         unless @fields;
-    
+
     return wantarray
         ?  @fields
         : \@fields;
 }
 
 
-# put this down at the bottom so Perl doesn't get confused when we use 
+# put this down at the bottom so Perl doesn't get confused when we use
 # core 'keys' in the code above
 
 sub keys {
@@ -570,7 +577,7 @@ sub key {
     else {
         # return the name of the auto-incremented id column if there is one
         return $self->{ id } if $self->{ id };
-            
+
         # return the one and only key, barfing if @$keys != 1
         my $keys = $self->{ keys };
         return @$keys > 1 ? $self->error_msg( multi_keys => $self->{ table } )
@@ -612,8 +619,8 @@ sub hub {
 sub where_clause {
     my $self  = shift;
     my $table = $self->{ table };
-    return join( 
-        ' AND ', 
+    return join(
+        ' AND ',
         map { /\./ ? "$_=?" : "$table.$_=?" }
         @_
     );
@@ -623,24 +630,24 @@ sub not_found {
     my ($self, $args, @fields) = @_;
     @fields = @{ $fields[0] } if @fields == 1 && ref $fields[0] eq ARRAY;
     my $keys = join(
-        ', ', 
-        map  { "$_ => " . (defined $args->{ $_ } ? $args->{ $_ } : '<undef>') } 
-        grep { defined $_ } 
+        ', ',
+        map  { "$_ => " . (defined $args->{ $_ } ? $args->{ $_ } : '<undef>') }
+        grep { defined $_ }
         @fields
     );
     return $self->decline_msg( not_found => $self->{ table } => $keys );
 }
-    
+
 sub debug_method {
     my ($self, $method, @args) = @_;
     $self->debug(
-        $method, '(', 
+        $method, '(',
         join(', ', map { $self->dump_data($_) } @args),
         ') from ', $self->{ table }
     );
 }
 
-    
+
 1;
 
 
@@ -656,16 +663,16 @@ Badger::Database::Table - database table abstraction module
     package Badger::Widgets;
     use base 'Badger::Database::Table';
     use Badger::Widget;
-    
+
     our $TABLE    = 'example';
     our $KEYS     = [ qw( id ) ];     # auto-generated by database
     our $FIELDS   = [ qw( name type ) ];
     our $RECORD   = 'Badger::Widget';
-    
+
     # now use it
     package main;
     use Badger;
-    
+
     # get a Badger::Database object
     my $database = Badger->database({
         type => 'mysql',
@@ -673,32 +680,32 @@ Badger::Database::Table - database table abstraction module
         user => 'nigel',
         pass => 'top_secret',
     });
-    
+
     # get a Badger::Database::Model wrapper for the database
     my $model = Badger->model( database => $database );
-    
+
     # now create the table object
     my $e  = Badger::Database::Table::Example->new({
         model => $model,
     });
-    
+
     # create a record and corresponding object
     my $record = $example->create({
         name => 'Thingy123',
         type => 'Widget',
     });
     print "added record: ", $record->id(), "\n";
-    
+
     # fetch a record as an object
     my $record = $example->fetch( id => 12345 );
     print "fetched record: ", $record->id(), "\n";
-    
+
     # update a record
     $example->update( id => 12345, name => 'Thingy235' );
-    
+
     # delete a record
     $example->delete( id => 12345 );
-     
+
 =head1 DESCRIPTION
 
 This module implements a base class object providing an interface to a
@@ -706,7 +713,7 @@ Badger database table. It is designed to be subclassed to provide
 access to specific tables in the database.
 
 NOTE: this documentation needs to be updated to reflect recent changes and
-enhancements to this module.  
+enhancements to this module.
 
 =head2 Writing a Database Table Module
 
@@ -716,35 +723,35 @@ implememt the fictional C<Badger::Widgets> module.
 
     package Badger::Widgets;
     use base 'Badger::Database::Table';
-    
+
     use strict;
     use warnings;
     use Badger::Widget;
-    
+
     our $VERSION  = 0.01;
     our $DEBUG    = 0 unless defined $DEBUG;
-    
+
     # database table and fields
     our $TABLE    = 'widget';
     our $KEYS     = [ qw( id ) ];
     our $FIELDS   = [ qw( name price ) ];
-    
+
     # object to turn database records into
     our $RECORD   = 'Badger::Widget';
 
 That's all there is to it.  There are no additional methods defined
-in this simple example, just the relevant bits of information that 
+in this simple example, just the relevant bits of information that
 the C<Badger::Database::Table> base class needs to perform the basic
 operations.
 
-The first two few lines define the package name and indicate that it is a 
+The first two few lines define the package name and indicate that it is a
 subclass of L<Badger::Database::Table>.
 
     package Badger::Widgets;
     use base 'Badger::Database::Table';
 
 We then enable strict mode and all warnings, as all good Perl modules do.
-We also load the C<Badger::Widget> module (also fictional) which will be 
+We also load the C<Badger::Widget> module (also fictional) which will be
 used to create objects from database records.  This should be a subclass
 module derived from L<Badger::Database::Record>.
 
@@ -786,7 +793,7 @@ implemented as a subclass of L<Badger::Database::Record>.
 With those definitions in place, the base class methods inherited from
 L<Badger::Database::Table> can figure out enough about the database to
 perform basic L<create()>, L<exists()>, L<fetch()>, L<update()> and
-L<delete()> operations. 
+L<delete()> operations.
 
 =head2 Initialising a Database Table Module
 
@@ -795,16 +802,16 @@ you must provide a reference to a L<Badger::Database::Model> object as the
 C<model> parameter. The model implements a collection of all the different
 table objects defined in the system (at least, the ones it knows about).
 It also has a reference to a L<Badger::Database> object for the underlying
-database connection via C<DBI>.  
+database connection via C<DBI>.
 
 Instead of mucking around creating all those objects manually, use the
 L<Badger> module as a convenient front-end.
 
     use Badger;
     use Badger::Widgets;
-    
+
     # create a Badger object with the required db info
-    my $badger = Badger->new( 
+    my $badger = Badger->new(
         database => {
             type => 'mysql',
             name => 'badger',
@@ -812,10 +819,10 @@ L<Badger> module as a convenient front-end.
             pass => 'top_secret',
         }
     );
-    
+
     # now get a model
     my $model = $badger->model();
-    
+
     # create your table object, passing the model ref
     my $widgets = Badger::Widgets->new( model => $model );
 
@@ -857,25 +864,25 @@ returned to determine the identifier that was assigned to it.
     });
     print "created widget id: ", $widget->id(), "\n";
 
-The C<fetch()> method can be used to fetch a widget by its 
+The C<fetch()> method can be used to fetch a widget by its
 primary key.
 
     $widget = $widgets->fetch(123);         # positional args
     $widget = $widgets->fetch(id => 123);   # named args
 
 The C<update()> method allows you to update a record.
-    	
+
     $widgets->update({
         id    => 123,
         price => 13.99,
     });
 
 The C<delete()> method allows you to delete a record.
-    	
+
     $widgets->delete(123);
     $widgets->delete(id => 123);
 
-=head2 Writing Custom Database Table Methods    
+=head2 Writing Custom Database Table Methods
 
 If you need to do anything more complicated then you'll need to write your own
 custom methods for L<create()>, L<fetch()>, and so on. Here's an example (a
@@ -886,22 +893,22 @@ identifier or their realm (a URI).
     package Example::Merchants;
     use Example::Merchant;
     use base 'Badger::Database::Table';
-    
+
     # ...the usual pre-amble...
     our $TABLE     = 'merchant';
     our $KEYS      = [ qw( id ) ];
     our $FIELDS    = [ qw( realm name merchant customer ) ];
     our $COLUMNS   = join(', ', @$KEYS, @$FIELDS);
-    
+
     # define our record object class
     our $RECORD = 'Example::Merchant';
-    
+
     # define some database queries
     our $QUERIES = {
-        fetch_id    => "SELECT $COLUMNS FROM $TABLE WHERE id=?", 
-        fetch_realm => "SELECT $COLUMNS FROM $TABLE WHERE realm=?", 
+        fetch_id    => "SELECT $COLUMNS FROM $TABLE WHERE id=?",
+        fetch_realm => "SELECT $COLUMNS FROM $TABLE WHERE realm=?",
     };
-    
+
     # define some error messages
     our $MESSAGES = {
         no_key  => "no 'id' or 'realm' parameter specified to %s",
@@ -920,7 +927,7 @@ en-masse (e.g. when you need to localise the application to another language).
         my $args = $self->args(@_);
         my $db   = $self->{ database };
         my ($key, $row);
-        
+
         if ($key = $args->{ id }) {
             $row = $db->row( $QUERIES->{ fetch_id }, $key ) || return;
         }
@@ -938,16 +945,16 @@ arguments provided. We'll use this logic in other methods (like C<exists()> and
 C<delete()>) so it makes good sense to extract it out into a separate method.
 We'll have a look at the C<args()> method shortly. For now, all you need to
 know is that it returns a reference to a hash array containing an C<id> or
-C<realm> item. 
+C<realm> item.
 
 Either way, we call the C<row()> method on the L<Badger::Database>
 object stored in our C<$self->{ database }> value (C<$db>). If we got
-passed an C<id> parameter then we use the query in 
+passed an C<id> parameter then we use the query in
 C<$QUERIES-E<gt>{ fetch_id }>:
 
     SELECT $COLUMNS FROM $TABLE WHERE id=?
 
-If instead we get a C<realm> parameter then we use 
+If instead we get a C<realm> parameter then we use
 C<$QUERIES-E<gt>{ fetch_realm }>:
 
     SELECT $COLUMNS FROM $TABLE WHERE realm=?
@@ -965,9 +972,9 @@ In this case, the error message thrown would be:
 
     no 'id' or 'realm' parameter specified to fetch
 
-The final thing the method does, assuming it does successfully fetch a 
+The final thing the method does, assuming it does successfully fetch a
 record from the database, is to call the C<record()> method to convert the
-C<$data> hash reference into an C<Example::Merchant> object, as 
+C<$data> hash reference into an C<Example::Merchant> object, as
 defined by our C<$RECORD> package variable.
 
     return $self->record($row);
@@ -975,7 +982,7 @@ defined by our C<$RECORD> package variable.
 Here's the C<args()> method that handles the arguments passed to the
 C<fetch()> method.
 
-    sub args { 
+    sub args {
         my $self = shift; my $args;
         if (@_ == 1) {
             if (ref $_[0] eq 'HASH') {
@@ -1004,7 +1011,7 @@ C<fetch()> method.
         return $args;
     }
 
-There's quite a lot to it, but that's really only because it's trying to be 
+There's quite a lot to it, but that's really only because it's trying to be
 as flexible as possible to make life easy for the end user.  It allows you
 to specify a single parameter which can be a numeric id or a realm URI:
 
@@ -1022,15 +1029,15 @@ Or pass a reference to a hash of named parameters:
     $merchants->fetch({ realm => 'http://example.co.uk/' });
 
 Here's another example of a C<create()> method which validates the
-arguments passed and provides defaults for those unspecified.  First 
+arguments passed and provides defaults for those unspecified.  First
 we have the relevant parts of the module pre-amble:
 
     package Example::Orders;
     use base 'Badger::Database::Table';
     use Example::Order;
-    
+
     # ..etc...
-    
+
     our $TABLE   = 'orders';
     our $KEYS    = [ qw( id ) ];
     our $FIELDS  = [ qw( customer amount currency exchange status date) ];
@@ -1046,16 +1053,16 @@ we have the relevant parts of the module pre-amble:
         no_amount     => 'no amount specified to %s',
     };
 
-Notice how we create C<$FLIST> and C<$VLIST> and then insert them into the 
+Notice how we create C<$FLIST> and C<$VLIST> and then insert them into the
 query (and any other queries that require them).  It's a lot neater and easier
 to understand at a glance than the verbose version:
 
-    insert => "INSERT INTO $TABLE 
-               (customer, amount, currency, exchange, status, date) 
-               VALUES 
+    insert => "INSERT INTO $TABLE
+               (customer, amount, currency, exchange, status, date)
+               VALUES
                (?, ?, ?, ?, ?, ?)",
 
-It's also less error-prone if you have to add or delete fields.  Just change the 
+It's also less error-prone if you have to add or delete fields.  Just change the
 C<$FIELDS> definition and let the code ripple the changes through.  Small things
 like this can make a big different when you multiply it out to a dozen or so
 queries.
@@ -1066,30 +1073,30 @@ So now here's the C<create()> method that uses the C<insert> query.
         my $self = shift;
         my $args = $self->args(@_);
         my $db   = $self->{ database };
-        
+
         # check we got a customer reference and amount
         return $self->error_msg( no_customer => 'create' )
             unless $args->{ customer };
         return $self->error_msg( no_amount => 'create' )
             unless $args->{ amount };
-                
+
         # set defaults for date and status
         my $currency = $self->hub->config->currency();
         $args->{ status   } ||= 'pending';
         $args->{ date     } ||= $self->date_today();
-        
+
         # run the query
-        $db->query( $QUERIES->{ insert }, 
+        $db->query( $QUERIES->{ insert },
                     @$args{ @$FIELDS } )
             || return $self->error_msg(insert_failed => $db->error());
-        
+
         $args->{ id } = $self->insert_id() || return;
-        
+
         return $self->record($args);
     }
 
 We again use a custom C<args()> method to handle our arguments. Then we check
-that C<customer> and C<amount> arguments have been provided: 
+that C<customer> and C<amount> arguments have been provided:
 
     # check we got a customer reference and amount
     return $self->error_msg( no_customer => 'create' )
@@ -1106,12 +1113,12 @@ method makes it immediately obvious what it's doing (a good example of
     $args->{ status   } ||= 'pending';
     $args->{ date     } ||= $self->date_today();
 
-Then we run the C<insert> query grepping out all the revelant arguments that 
+Then we run the C<insert> query grepping out all the revelant arguments that
 match the field names defined in C<$FIELDS>.  We're careful to report back
 any error straight away.
 
     # run the query
-    $db->query( $QUERIES->{ insert }, 
+    $db->query( $QUERIES->{ insert },
                 @$args{ @$FIELDS } )
         || return $self->error_msg( insert_failed => $db->error());
 
@@ -1126,7 +1133,7 @@ C<Example::Order> database record object object for us to return.
     return $self->record($args);
 
 If you need to do anything special when you turn database records into objects
-then you can implement your own L<record()> method.  
+then you can implement your own L<record()> method.
 
 =head1 METHODS
 
@@ -1141,7 +1148,7 @@ reference to a hash array or a list of named parameters.
 
 =head2 new()
 
-Constructor method.  
+Constructor method.
 
     my $table    = Badger::Database::Table->new({
         model => $database,
@@ -1168,12 +1175,12 @@ C<$model-E<gt>database()>).
 The name of the database table. Defaults to the table name specified in
 the C<$TABLE> package variable, as defined by subclass modules.
 
-=head3 keys 
+=head3 keys
 
 A reference to a list of key fields in the table. Defaults to the list
 of keys defined in the C<$KEYS> package variable.
 
-=head3 fields 
+=head3 fields
 
 A reference to a list of non-key fields in the table. Defaults to the
 list of keys defined in the C<$FIELDS> package variable.
@@ -1241,7 +1248,7 @@ Update an existing record in the database.
 Delete a record from the database.
 
     $table->delete( id => 12345 );
-        
+
 =head2 store(%data)
 
 Store a record in the database table, creating it if it doesn't exists
@@ -1285,4 +1292,3 @@ under the same terms as Perl itself.
 # End:
 #
 # vim: expandtab shiftwidth=4:
-

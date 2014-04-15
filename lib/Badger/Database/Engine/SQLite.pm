@@ -1,16 +1,3 @@
-#========================================================================
-#
-# Badger::Database::Engine::SQLite
-#
-# DESCRIPTION
-#   Subclass of Badger::Database::Engine which implements methods 
-#   specific to SQLite
-#
-# AUTHOR
-#   Andy Wardley   <abw@wardley.org>
-#
-#========================================================================
-
 package Badger::Database::Engine::SQLite;
 
 use Badger::Class
@@ -37,7 +24,7 @@ sub dsn {
 sub insert_id {
     my ($self, $table, $field) = @_;
 
-    my $dbh = $self->{ dbh } 
+    my $dbh = $self->{ dbh }
         || return $self->error_msg(no_dbh);
 
     # default sequence name is <table>_<field>_seq, e.g. users_id_seq
@@ -69,7 +56,7 @@ providing methods specific to the SQLite database.
 
 =head1 METHODS
 
-This module inherits all the method from the L<Badger::Database::Engine> 
+This module inherits all the method from the L<Badger::Database::Engine>
 base class.  The following methods are redefined to implement behaviours
 specific to SQLite.
 
@@ -96,8 +83,8 @@ under the same terms as Perl itself.
 
 =head1 SEE ALSO
 
-L<Badger::Database>, 
-L<Badger::Database::Engine>, 
+L<Badger::Database>,
+L<Badger::Database::Engine>,
 L<Badger::Database::Engines>.
 
 =cut
@@ -109,4 +96,3 @@ L<Badger::Database::Engines>.
 # End:
 #
 # vim: expandtab shiftwidth=4:
-

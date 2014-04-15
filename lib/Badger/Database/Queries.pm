@@ -35,9 +35,9 @@ use Badger::Factory::Class
         IS_NAME  => qr/^\w+$/,
     },
     config       => [
-       'engine|class:ENGINE!',              # mandatory engine object
-       'query|class:QUERY|method:QUERY',    # query class
-       'transaction|class:TRANSACTION',     # transaction class
+       'engine|class:ENGINE!',                           # mandatory engine object
+       'query|query_module|class:QUERY|method:QUERY',    # query class
+       'transaction|class:TRANSACTION',                  # transaction class
     ];
 
 our $META_QUERIES = {
@@ -51,9 +51,9 @@ our $TRANSACTION = 'Badger::Database::Transaction';
 
 sub init {
     my ($self, $config) = @_;
-    # We have to be careful because both Badger::Database and 
+    # We have to be careful because both Badger::Database and
     # Badger::Database::Table are subclasses and they're a bit fussy
-    # about the order in which initialisation happens.  They like to 
+    # about the order in which initialisation happens.  They like to
     # do their own configure() and then call init_queries() separately.
     $self->configure($config);
     $self->init_queries($config);
@@ -67,15 +67,15 @@ sub init_queries {
     $self->init_factory($config);
 
     # also add any $META_QUERIES
-    $self->{ meta_queries } = $self->class->hash_vars( 
-        META_QUERIES => $config->{ meta_queries } 
+    $self->{ meta_queries } = $self->class->hash_vars(
+        META_QUERIES => $config->{ meta_queries }
     );
 
     # same for any query $FRAGMENTS
-    $self->{ fragments } = $self->class->hash_vars( 
-        FRAGMENTS => $config->{ fragments } 
+    $self->{ fragments } = $self->class->hash_vars(
+        FRAGMENTS => $config->{ fragments }
     );
-    
+
     $self->debug("Initialised queries: ", $self->dump_data($self->{ queries }))
         if DEBUG;
 }
@@ -106,12 +106,12 @@ sub query {
             return $query;
         }
         else {
-            # TODO: sth, B::DB::Query, etc., 
+            # TODO: sth, B::DB::Query, etc.,
             return $self->todo('query refs');
         }
     }
     elsif ($query =~ /[^\w\.=]/) {        # TODO: why the '='?  Should it use IS_NAME?
-        # $query contains non-word characters so it's "raw" SQL which we 
+        # $query contains non-word characters so it's "raw" SQL which we
         # don't cache once prepared
         $self->debug("Found raw SQL query: $query") if DEBUG;
         return $self->prepare_query($query);
@@ -126,7 +126,7 @@ sub query {
 
         # otherwise it's a named query which will be cached once prepared
         $self->debug("Found named query for $query\n") if DEBUG;
-        
+
         return $self->{ query_cache }->{ $query } ||= do {
             $self->debug("Preparing query: $query => $sql\n") if DEBUG;
             $self->prepare_query($sql);
@@ -153,15 +153,15 @@ sub prepare_query_module {
     my $self   = shift;
     my $module = shift;
     my $params = $self->query_params(@_);
-    
+
     $self->debug(
-        "preparing query module: $module with params: ", 
+        "preparing query module: $module with params: ",
         $self->dump_data($params)
     ) if DEBUG;
 
     # load module if necessary
     $self->{ loaded }->{ $module } ||= class($module)->load;
-    
+
     $params->{ queries } = $self;
     $params->{ engine  } = $self->{ engine };
 
@@ -177,7 +177,7 @@ sub query_params {
 sub select {
     my $self = shift;
     my $args;
-    
+
     if (@_ == 1) {
         $args = ref $_[0] eq HASH
             ? shift
@@ -210,7 +210,7 @@ sub prepare_meta_query {
     my $frags = @_ && ref $_[0] eq HASH ? shift : { @_ };
 
     $self->debug_method( prepare_meta_query => $type, $name, $frags ) if DEBUG;
-    
+
     # $name can be an array ref of name elements
     $name = join('_', AUTOGEN, $type, @$name)
         if ref $name eq ARRAY;
@@ -239,30 +239,30 @@ sub expand_fragments {
     # Each query subclass can define its own set of SQL fragments,
     # along with any that are provided by the user as config params.
     my $frags = $self->fragments;
-    
+
     # a set of user-defined fragments can also be passed to the method
     $params ||= { };
-    
+
     $self->debug(
         "Expanding fragments in query: $sql\n",
         " fragments: ", $self->dump_data($frags), "\n",
         " params: ", $self->dump_data($params), "\n"
     ) if DEBUG;
-        
+
     my $n = 16;
-    1 while $n-- && $sql =~ 
+    1 while $n-- && $sql =~
         s/
             # accept fragments like <keys> <?keys> and <keys=?>
-            < (\?? \w+ (=\?)?) > 
-        / 
+            < (\?? \w+ (=\?)?) >
+        /
             $params->{ $1 }     # user-defined fragment
          || $frags->{ $1 }      # table-specific fragment
-         || return $self->error_msg( bad_sql_frag => $1 => $sql ) 
+         || return $self->error_msg( bad_sql_frag => $1 => $sql )
         /gex;
 
     # cleanup any excessive whitespace
     $sql =~ s/\n(\s*\n)+/\n/g;
-    $self->debug("Expanded fragments in query: $sql\n") 
+    $self->debug("Expanded fragments in query: $sql\n")
         if DEBUG;
 
     return $sql;
@@ -275,9 +275,9 @@ sub column {
     if ($query =~ IS_NAME) {
         # $q->column('foo') is sugar for $q->column('SELECT foo FROM <table>')
         $query = $self->prepare_meta_query(
-            # This looks weird.  The first arg is name of meta query, then 
-            # a list ref of columns we're operating on.  The remaining 
-            # arguments are the fragments to expand, which happen to be 
+            # This looks weird.  The first arg is name of meta query, then
+            # a list ref of columns we're operating on.  The remaining
+            # arguments are the fragments to expand, which happen to be
             # 'column', which expands to the column name in $query
             column => [$query],     # this is weird - first arg is meta query
             column => $query,       # name, then list ref of columns, followe
@@ -311,7 +311,7 @@ sub transaction {
     my $self  = shift;
     my $that  = shift || $self;     # allows objects other than $self to be wrapped
     my $class = $self->{ transaction };
-    
+
     $self->debug("preparing transaction module: $class") if DEBUG;
 
     # load module if necessary
@@ -326,22 +326,22 @@ sub destroy {
     my $self = shift;
     my $msg  = shift || '';
     my ($queries, $query);
-    
+
     $self->debug(
-        "Destroying queries", 
+        "Destroying queries",
         length $msg ? " ($msg)" : ''
     ) if DEBUG;
 
-    # destroy any cache queries 
+    # destroy any cache queries
     $queries = delete $self->{ query_cache };
     foreach $query (values %$queries) {
         $query->destroy if $query;
     }
     %$query = ();
-    
+
     # delete engine reference
     delete $self->{ engine };
-    
+
     return $self;
 }
 
@@ -351,5 +351,3 @@ sub DESTROY {
 }
 
 1;
-
-
