@@ -67,6 +67,8 @@ sub init {
 
     # Let the Badger::Database::Queries base class initialiase queries
     $self->init_queries($config);
+
+    return $self;
 }
 
 sub init_schema {
