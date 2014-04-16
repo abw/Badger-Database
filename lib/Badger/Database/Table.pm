@@ -32,8 +32,9 @@ use Badger::Class
         'table|name|class:TABLE:NAME!',
         'id|id_field|serial|class:ID:SERIAL',
         'keys|key|key_field|key_fields|class:KEY:KEYS',
-        'fields|selectable|class:FIELDS',
+        'fields|class:FIELDS',
         'valid|class:VALID',
+        'select|selectable|class:SELECT',
         'update|updateable|class:UPDATE',
         'record|record_module|class:RECORD',
         'record_base|method:RECORD',
@@ -114,9 +115,16 @@ sub init_schema {
     $fields = [ split DELIMITER, $fields ] unless ref $fields eq ARRAY;
     $self->{ fields } = $fields;
 
-    # fields we're allowed to update, we store a list in 'updates' (note
-    # plural, in keeping with 'keys', 'fields', etc) and also have an 'update'
+    # fields we're allowed to select, we store a list in 'selects' (note
+    # plural, in keeping with 'keys', 'fields', etc) and also have a 'select'
     # hash table (along with 'key', 'field', etc') for fast set inclusion tests
+    # NOTE: this isn't in use... yet
+    my $selects = $self->{ select } || [ ];
+    $selects = [ split DELIMITER, $selects ] unless ref $selects eq ARRAY;
+    $self->{ selects } = $selects;
+
+    # fields we're allowed to update, we store a list in 'updates'/'update' as
+    # per 'selects'/'select'
     my $updates = $self->{ update } || [ ];
     $updates = [ split DELIMITER, $updates ] unless ref $updates eq ARRAY;
     $self->{ updates } = $updates;
