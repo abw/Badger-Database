@@ -337,7 +337,7 @@ sub insert {
 
     my $query = $self->prepare_meta_query(
         insert => \@fields,
-        fields => join(', ', @fields),
+        fields => join(', ', map {"`$_`"} @fields),
         values => join(', ', ('?') x scalar(@fields)),
     );
 
@@ -391,7 +391,7 @@ sub update {
 
     my $query  = $self->prepare_meta_query(
         update => [@fields, @keys],
-        set    => join(', ', map { "$_=?" } @fields),
+        set    => join(', ', map { "`$_`=?" } @fields),
         where  => $self->where_clause(@keys),
     );
 
