@@ -8,10 +8,8 @@
 #
 #========================================================================
 
-use strict;
-use warnings;
-use lib qw( ./lib ../lib ../../lib );
-#use lib '/home/abw/projects/badger/lib';
+use Badger
+    lib => '../../lib';
 use Badger::Test
     debug => 'Badger::Database::Table
               Badger::Database::Record-No
@@ -30,7 +28,7 @@ ok( $tdb->create_test_tables, 'created test tables' );
 my $users = $tdb->table('users');
 ok( $users, 'got users table' );
 
-my $user = $users->insert( 
+my $user = $users->insert(
     name     => 'Andy Wardley',
     username => 'abw',
     password => 'secret',
@@ -43,7 +41,7 @@ is( $user->username, 'abw', 'username method matches' );
 is( $user->password, 'secret', 'password method matches' );
 
 # check that any other data is forwarded to record
-$user = $users->insert( 
+$user = $users->insert(
     name     => 'Andy Wardley',
     username => 'abw',
     password => 'secret',
