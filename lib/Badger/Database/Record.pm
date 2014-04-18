@@ -301,9 +301,9 @@ sub generate_link_method {
     my $self  = shift;
     my $name  = shift;
     my $args  = @_ && ref $_[0] eq 'HASH' ? shift : { @_ };
-    my $item  = $args->{ key    } || sprintf($KEY_FORMAT, $name);
+    my $item  = $args->{ key    } || $args->{ local_key  } || sprintf($KEY_FORMAT, $name);
+    my $fkey  = $args->{ fkey   } || $args->{ remote_key };
     my $table = $args->{ table  } || $name;
-    my $fkey  = $args->{ fkey   };
     my $where = $args->{ where  };
     my $class = ref $self || $self;
     no strict REFS;
@@ -343,7 +343,8 @@ sub generate_relation_method {
         my $args   = @_ && ref $_[0] eq HASH ? shift : { @_ };
         my $type   = $args->{ type  };
         my $tname  = $args->{ table } ||= $name;
-        my $key    = $args->{ key   } ||= $self->key();
+        my $key    = $args->{ key   } ||= $args->{ local_key  } || $self->key;
+        my $fkey   = $args->{ fkey  } ||= $args->{ remote_key };
         my $module = $self->relation_module($type, $name);
 
         $self->debug(
@@ -356,7 +357,7 @@ sub generate_relation_method {
             my $id   = $self->{ $key };
             $self->debug(
                 "called $name() to fetch $type from $tname ",
-                $args->{ fkey } ? "with $args->{ fkey } " : '',
+                $fkey ? "with $fkey " : '',
                 "matching our $key=$id\n"
             ) if $DEBUG;
             my $table = $self->table($tname)
