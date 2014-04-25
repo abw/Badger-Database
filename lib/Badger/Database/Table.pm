@@ -433,7 +433,7 @@ sub delete {
 # fetch methods
 #-----------------------------------------------------------------------
 
-sub fetch {
+sub fetch_row {
     my $self    = shift;
     my $args    = $self->method_args( fetch => @_ );
     my @fields  = $self->method_fields( fetch => $args );
@@ -445,20 +445,18 @@ sub fetch {
 
     $self->debug("fetch query: ", $query->sql, @$args{ @fields }) if DEBUG;
 
-    my $row     = $query->row( @$args{ @fields } )
+    return $query->row( @$args{ @fields } )
         || return $self->not_found( $args, @fields );
-
-    return $self->record($row);
 }
 
-sub fetch_one {
+sub fetch_one_row {
     my $self = shift;
     # TODO: should we check we don't get more than one?
-    return $self->fetch(@_)
+    return $self->fetch_row(@_)
         || $self->error( $self->reason );
 }
 
-sub fetch_all {
+sub fetch_all_rows {
     my $self    = shift;
     my $args    = $self->method_args( fetch_all => @_ );
     my @fields  = %$args ? $self->method_fields( fetch_all => $args ) : ();
@@ -501,6 +499,25 @@ sub fetch_all {
             || return $self->decline_msg( not_found => $self->{ table } => 'fetch_all' );
     }
 
+    return $rows;
+}
+
+
+sub fetch {
+    my $self = shift;
+    my $row  = $self->fetch_row(@_) || return;
+    return $self->record($row);
+}
+
+sub fetch_one {
+    my $self = shift;
+    my $row  = $self->fetch_one_row(@_) || return;
+    return $self->record($row);
+}
+
+sub fetch_all {
+    my $self    = shift;
+    my $rows = $self->fetch_all_rows(@_) || return;
     return $self->records($rows);
 }
 
