@@ -313,14 +313,20 @@ sub generate_link_method {
         $self->debug("where: {", join(', ', map { "$_ => $where->{ $_ } }" } keys %$where), " }")
             if $DEBUG && $where;
 
+        # add a method that fetches and cached the related record
         *{ $class.PKG.$name } = sub {
-            $self->debug("linking $item to $table: $_[0]->{ $item }\n") if $DEBUG;
-
-            return $_[0]->{"${name}_record"}  # cache object returned
+            return unless defined $_[0]->{ $item };   # no reference item
+            $self->debug("$_[0] linking $item to $table: $_[0]->{ $item }\n") if $DEBUG;
+            return $_[0]->{"${name}_record"}          # cache object returned
                ||= $_[0]->table($table)->fetch(
                         $fkey  ? ($fkey => $_[0]->{ $item }) : $_[0]->{ $item },
                         $where ? %$where : ()
                    );
+        };
+        # add another method that deletes the cached reference
+        *{ $class.PKG."uncache_$name" } = sub {
+            delete $_[0]->{"${name}_record"};
+            return $_[0];
         };
     }
 }
@@ -370,6 +376,11 @@ sub generate_relation_method {
                     id    => $id,
                     fetch => 1,
                 });
+        };
+        # add another method that deletes the cached reference
+        *{ $class.PKG."uncache_$name" } = sub {
+            delete $_[0]->{"${name}_relation"};
+            return $_[0];
         };
     }
 }
