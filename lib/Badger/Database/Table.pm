@@ -13,7 +13,7 @@
 package Badger::Database::Table;
 
 use Badger::Class
-    version     => 0.01,
+    version     => 0.02,
     debug       => 0,
     base        => 'Badger::Database::Queries',
     constants   => 'ARRAY HASH DELIMITER PKG',
