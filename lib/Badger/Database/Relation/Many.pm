@@ -84,6 +84,8 @@ sub fetch {
     });
     @$self = @$items;
 
+    $self->debug("fetched") if DEBUG;
+
     return $self;
 }
 

@@ -238,11 +238,12 @@ sub renumber {
     $query = "UPDATE <table> SET $index=$index+? WHERE $index>=? AND $where";
 
     # TODO: generate this from a meta-query
-    $table->queries->{ $qname } ||= $query;
+    # This is broken
+    #$table->queries->{ $qname } ||= $query;
 
     $self->debug("renumber: $qname => $query [", join(', ', @values), ']') if DEBUG;
 
-    $table->execute( $qname => @values );
+    $table->execute( $query => @values );
 
     foreach my $item (@$self[$start..$#$self]) {
         # I am a dirty slut - I hack data straight out of the object

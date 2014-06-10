@@ -193,6 +193,8 @@ sub AUTOLOAD {
     # read/write/update/etc based on what the schema says.
     if ($self->{ _table }) {
         my $schema = $self->{ _table }->schema;
+        my $saved  = $name;
+        my $prefix = ($name =~ s/^(uncache_)//) && $1;
         my $method;
 
         if ($DEBUG) {
@@ -206,8 +208,8 @@ sub AUTOLOAD {
             if ($method) {                          # set method => 0 to disable method
                 $self->debug("Found method in schema: $name\n") if $DEBUG;
                 $self->generate_method($name => $method);
-                $self->debug("Calling $self->$name(", join(',', @args), ")\n") if $DEBUG;
-                return $self->$name(@args);
+                $self->debug("Calling $self->$saved(", join(',', @args), ")\n") if $DEBUG;
+                return $self->$saved(@args);
             }
         }
         elsif ($schema->{ update }->{ $name }) {
@@ -323,12 +325,12 @@ sub generate_link_method {
                         $where ? %$where : ()
                    );
         };
-        # add another method that deletes the cached reference
-        *{ $class.PKG."uncache_$name" } = sub {
-            delete $_[0]->{"${name}_record"};
-            return $_[0];
-        };
     }
+    # add another method that deletes the cached reference
+    $self->generate_uncache_method(
+        "uncache_$name",
+        "${name}_record"
+    );
 }
 
 sub relation_module {
@@ -377,11 +379,24 @@ sub generate_relation_method {
                     fetch => 1,
                 });
         };
-        # add another method that deletes the cached reference
-        *{ $class.PKG."uncache_$name" } = sub {
-            delete $_[0]->{"${name}_relation"};
+    }
+    $self->generate_uncache_method(
+        "uncache_${name}",
+        "${name}_relation"
+    );
+}
+
+sub generate_uncache_method {
+    my ($self, $name, $item) = @_;
+    my $class = ref $self || $self;
+    no strict REFS;
+
+    # add a method that deletes the cached reference
+    unless (defined &{ $class.PKG.$name }) {
+        *{ $class.PKG.$name } = sub {
+            delete $_[0]->{ $item };
             return $_[0];
-        };
+          };
     }
 }
 
