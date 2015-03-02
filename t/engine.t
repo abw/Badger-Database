@@ -8,7 +8,6 @@
 #
 #========================================================================
 
-use lib '/Users/abw/projects/badger/lib';
 use strict;
 use warnings;
 use lib qw( ./lib ../lib ../../lib );
