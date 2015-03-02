@@ -278,7 +278,7 @@ sub table_fragments {
         my ($keys, $fields) = @$self{ qw( keys fields ) };
         my $table = $self->{ table };
         my $frags = {
-            table       => $table,
+            table       => "`$table`",
             id          => $self->{ id },
             keys        => join(', ', @$keys),
             fields      => join(', ', @$fields),
@@ -287,7 +287,7 @@ sub table_fragments {
             '?keys'     => join(', ', map { '?' } @$keys),
             '?fields'   => join(', ', map { '?' } @$fields),
             '?columns'  => join(', ', map { '?' } @$keys, @$fields),
-            'keys=?'    => join(' AND ', map { "$_=?" } @$keys),
+            'keys=?'    => join(' AND ', map { "`$_`=?" } @$keys),
         };
         $frags->{ key   } = $frags->{ keys };
         $frags->{'key=?'} = $frags->{'keys=?'};
@@ -340,6 +340,8 @@ sub insert {
         fields => join(', ', map {"`$_`"} @fields),
         values => join(', ', ('?') x scalar(@fields)),
     );
+
+    $self->debug("prepared insert query: ", $query->sql) if DEBUG;
 
     my $sth = $query->execute( @$args{ @fields } );
 
