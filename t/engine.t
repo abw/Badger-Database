@@ -8,12 +8,13 @@
 #
 #========================================================================
 
+use lib '/Users/abw/projects/badger/lib';
 use strict;
 use warnings;
 use lib qw( ./lib ../lib ../../lib );
 use Badger::Test
     tests => 6,
-    debug => 'Badger::Database::Engine',
+    debug => 'Badger::Database::Engine Badger::Config',
     args  => \@ARGV;
 
 use Badger::Database::Engine;
@@ -83,4 +84,3 @@ is( $engine->driver, 'mysql', 'got engine driver' );
 is( $engine->database, 'example', 'got engine database' );
 is( $engine->username, 'tom', 'got engine username' );
 is( $engine->password, 'secret', 'got engine password' );
-

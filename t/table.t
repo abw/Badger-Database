@@ -13,13 +13,19 @@
 use strict;
 use lib qw( ./lib ../lib ../../lib );
 use Badger::Test
-    tests => 38,
     debug => 'Badger::Database::Table',
     args  => \@ARGV;
 
 # TODO: we may want to skip all DB tests
 use Badger::Test::Database;
 use Badger::Test::Table;
+use Badger::Test::DBConfig;     # imports $ENGINE, $DATABASE, $USERNAME, etc...
+
+BEGIN {
+    skip_all("You said you didn't want to run the extended tests") unless $DB_TESTS;
+    plan(38);
+}
+
 
 my $db = Badger::Test::Database->new;
 ok( $db, 'got test DB connection' );
@@ -65,7 +71,7 @@ my ($dbc0, $dbc1, $dbc2, $dbc3, $dbc4) = map {
 
 
 #-----------------------------------------------------------------------
-# these test are to ensure that the above subclasses grok their 
+# these test are to ensure that the above subclasses grok their
 # class variables correctly.
 #-----------------------------------------------------------------------
 
@@ -88,7 +94,7 @@ ok( $t1, 'got first test table' );
 is( $t1->engine,    $db->engine,        'one got engine'     );
 is( $t1->name,      'my_table1',        'one got table name' );
 is( $t1->key,       'my_id',            'one got table key'  );
-is( join('+', @{ $t1->keys }),  
+is( join('+', @{ $t1->keys }),
                     'my_id',            'one got table keys' );
 
 my $t2 = $dbc2->new( engine => $db->engine );
@@ -96,7 +102,7 @@ ok( $t2, 'got second test table' );
 is( $t2->engine,    $db->engine,        'two got engine'     );
 is( $t2->name,      'my_table2',        'two got table name' );
 is( $t2->key,       'my_key',           'two got table key'  );
-is( join('+', @{ $t2->keys }),  
+is( join('+', @{ $t2->keys }),
                     'my_key',           'two got table keys' );
 
 my $t3 = $dbc3->new( engine => $db->engine );
@@ -113,8 +119,8 @@ is( $t3->reason, 'database.table error - Multiple keys are defined for the my_ta
 # test via the Badger::Test::Table module
 #-----------------------------------------------------------------------
 
-my $user = $table->insert( 
-    username => 'nb', 
+my $user = $table->insert(
+    username => 'nb',
     password => 'top_secret',
     name     => 'Nigel the Badger',
 );

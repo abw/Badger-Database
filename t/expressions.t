@@ -9,10 +9,10 @@
 #========================================================================
 
 use lib qw( ./lib ../lib );
-use Badger::Test 
+use Badger::Test
     debug => 'Badger::Modules Badger::Database::Expressions Badger::Database::Expression',
     args  => \@ARGV,
-    tests => 1;
+    tests => 2;
 
 use Badger::Database::Expressions;
 use constant
@@ -30,7 +30,7 @@ my $expr = $base
     ->select('id, name, email')
     ->where( id => 2 );
 
-print $expr->DUMP;
+#print $expr->DUMP;
 
 __END__
 my $expr = $exprs->expression( from => 'users' );

@@ -12,11 +12,16 @@ use strict;
 use warnings;
 use lib qw( ./lib ../lib ../../lib );
 use Badger::Test
-    tests => 7,
     debug => 'Badger::Database::Query Badger::Database::Query::Select',
     args  => \@ARGV;
 
 use Badger::Test::Database 'TDB';
+use Badger::Test::DBConfig;     # imports $ENGINE, $DATABASE, $USERNAME, etc...
+
+BEGIN {
+    skip_all("You said you didn't want to run the extended tests") unless $DB_TESTS;
+    plan(7);
+}
 
 my $select = TDB->query('select');
 ok( $select, 'got select query module' );
@@ -28,10 +33,10 @@ $select
     ->columns('age')
     ->order_by('age');
 
-is( 
-    $select->sql, 
-    'SELECT name, email, age FROM users WHERE id=? ORDER BY age', 
-    'got generated SQL for database query' 
+is(
+    $select->sql,
+    'SELECT name, email, age FROM users WHERE id=? ORDER BY age',
+    'got generated SQL for database query'
 );
 
 #-----------------------------------------------------------------------
@@ -42,7 +47,7 @@ my $users = TDB->table('users');
 ok( $users, 'got users table' );
 my $query = $users->select('id, name')->where('id=100');
 ok( $query, 'got select query' );
-is( 
+is(
     $query->sql,
     # note we get the *correct* table name because the query was generated
     # by the table object which knows its own name

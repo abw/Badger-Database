@@ -11,15 +11,19 @@
 use strict;
 use warnings;
 use lib qw( ./lib ../lib ../../lib );
-#use lib '/home/abw/projects/badger/lib';
 use Badger::Test
-    tests => 7,
     debug => 'Badger::Database::Queries Badger::Factory',
     args  => \@ARGV;
 
 use Badger::Test::Database 'TDB';
+use Badger::Test::DBConfig;     # imports $ENGINE, $DATABASE, $USERNAME, etc...
 
-my $db = TDB->new( 
+BEGIN {
+    skip_all("You said you didn't want to run the extended tests") unless $DB_TESTS;
+    plan(7);
+}
+
+my $db = TDB->new(
     queries => {
         get_user => 'SELECT * FROM users WHERE id=?',
     },
@@ -55,5 +59,3 @@ is( $query->sql, 'SELECT * FROM friends WHERE friend_id=?', 'got friends sql' );
 
 $query = $db->query('select');
 ok( $query, 'got select query module' );
-
-
