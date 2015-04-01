@@ -38,13 +38,18 @@ sub sql {
 
 sub prepare_sql {
     # hook for future expansion where SQL is generated on demand
-    shift->not_implemeted('in base class');
+    shift->not_implemented('in base class');
 }
 
 
 #-----------------------------------------------------------------------------
 # SQL -> STH
 #-----------------------------------------------------------------------------
+
+sub prepare {
+    # this method is required for backwards compatibility
+    shift->sth;
+}
 
 sub sth {
     my $self = shift;
