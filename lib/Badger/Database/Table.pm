@@ -279,6 +279,7 @@ sub table_fragments {
         my $table = $self->{ table };
         my $frags = {
             table       => "`$table`",
+            tname       => $table,
             id          => $self->{ id },
             keys        => join(', ', @$keys),
             fields      => join(', ', @$fields),
