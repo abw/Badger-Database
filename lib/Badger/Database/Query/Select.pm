@@ -46,7 +46,7 @@ our $JOINTS = {
     from   => ', ',
     join   => ' ',
     where  => ' AND ',
-    order  => ', ', 
+    order  => ', ',
     group  => ', ',
 };
 our @FRAGMENTS = keys %$JOINTS;
@@ -63,7 +63,7 @@ class->methods(
             return $self;
         }
     }
-    @LIST_ARGS 
+    @LIST_ARGS
 );
 
 
@@ -74,7 +74,7 @@ sub init {
 
     foreach my $key (@LIST_ARGS) {
         my $value = $self->{ $key } || [ ];
-        $value = [ $value ] 
+        $value = [ $value ]
             unless ref $value eq ARRAY;
         $self->{ $key } = $value;
     }
@@ -86,7 +86,7 @@ sub init {
             unless ref $columns eq ARRAY;
         $self->columns($columns);
     }
-    
+
     $self->{ tables } = {
         map { $_ => $_ }
         @{ $self->{ from } }
@@ -104,10 +104,10 @@ sub columns {
     my $val;
 
     $self->debug("new columns(): ", $self->dump_data($newcols)) if DEBUG;
-    
+
     $self->select(
         # prefix the column names with the name of the last table specified
-        map  { 
+        map  {
 #            $self->debug("COLUMN: $_\n");
             if (ref $_ eq ARRAY) {
                 $val = $columns->{ $_->[1] } = $_->[0] . ' AS ' . $_->[1];
@@ -125,7 +125,7 @@ sub columns {
         grep { defined && length }
         @$newcols
     );
-    
+
     return $self;
 }
 
@@ -139,40 +139,40 @@ sub table_name {
 sub sql_fragments {
     my $self  = shift;
     my $frags = {
-        map { 
+        map {
             $_ => join(
                 $JOINTS->{ $_ },
                 grep { defined && length }
                 @{ $self->{ $_ } }
             )
-        } 
+        }
         @FRAGMENTS
     };
     $frags->{ select } ||= '*';
 
-    return $frags;        
+    return $frags;
 }
 
 
 sub prepare_sql {
     my $self  = shift;
     my $frags = $self->sql_fragments;
-        
+
     return $self->error_msg( missing => 'source table(s)' )
         unless $frags->{ from };
-        
+
     my @sql;
 
-    # TODO: determine signature for query so we can see if there's a 
+    # TODO: determine signature for query so we can see if there's a
     # pre-cached metaquery
 
     $self->debug(
-        "prepare_sql() frags: ", 
+        "prepare_sql() frags: ",
         $self->dump_data($frags)
     ) if DEBUG;
 
     push(
-        @sql, 
+        @sql,
         $self->BEFORE,
         $self->SELECT => $frags->{ select },
         $self->FROM   => $frags->{ from   },
@@ -198,7 +198,7 @@ sub prepare_sql {
         @sql,
         $self->AFTER,
     );
-    
+
     # cleanup any excessive whitespace
     my $sql = join(' ', grep { defined && length } @sql);
     $sql =~ s/\n(\s*\n)+/\n/g;
@@ -207,7 +207,7 @@ sub prepare_sql {
     if (DEBUG) {
         $self->debug('SQL: ', $sql);
     }
- 
+
     return $sql;
 }
 
@@ -222,5 +222,3 @@ sub execute {
 
 
 1;
-
-
