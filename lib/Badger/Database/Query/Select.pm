@@ -117,7 +117,7 @@ sub columns {
 #                $val = $columns->{ $_ } = $_;
 #	    }
             else {
-                $val = $columns->{ $_ } = /\W/ ? $_ : $table.DOT.$_;
+                $val = ($columns->{ $_ } =~ /\W/) ? $_ : $table.DOT.$_;
             }
             $val;
         }
