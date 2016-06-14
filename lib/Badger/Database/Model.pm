@@ -44,48 +44,48 @@ sub init {
 
     $self->{ engine } = $config->{ engine }
         || return $self->error_msg( missing => 'engine' );
-        
-    $self->{ tables } = $self->class->hash_vars( 
-        TABLES => $config->{ tables } 
+
+    $self->{ tables } = $self->class->hash_vars(
+        TABLES => $config->{ tables }
     );
 
-    $self->{ records } = $self->class->hash_vars( 
-        RECORDS => $config->{ records } 
+    $self->{ records } = $self->class->hash_vars(
+        RECORDS => $config->{ records }
     );
 
     $self->debug(
-        "model tables: ", 
+        "model tables: ",
         $self->dump_data($self->{ tables }),
         "\n",
-        "model records: ", 
+        "model records: ",
         $self->dump_data($self->{ records }),
-        
+
     ) if DEBUG;
-    
+
     $self->{ table_base } = $config->{ table_base } || $self->TABLE;
-    
+
     return $self;
 }
 
 sub table {
     my $self = shift;
     my $name = shift || return $self->error_msg( missing => 'table' );
-    
-    # Look for the table in the cache or create it.  
-    
+
+    # Look for the table in the cache or create it.
+
     return $self->{ table_cache }->{ $name } ||= do {
         my ($module, $config);
 
         $self->debug(
-            "looking for $name in tables: ", 
-            $self->dump_data($self->{ tables }), 
+            "looking for $name in tables: ",
+            $self->dump_data($self->{ tables }),
             "\n"
         ) if DEBUG;
 
-        $module = $self->{ tables }->{ $name }  
-            || $self->{ tables }->{ plural $name }  
+        $module = $self->{ tables }->{ $name }
+            || $self->{ tables }->{ plural $name }
             || return $self->error_msg( no_table => $name );
-            
+
         # table entry can be a module name or hash ref of config params
         if (! ref $module) {
             $config = { };                  # got a module name, no config
@@ -97,14 +97,14 @@ sub table {
         else {
             return $self->error_msg( bad_table => $name => $module );
         }
-    
+
         if ($module) {
             # if we've got the name of a module then we just need to load it
             $self->debug("Loading $name table module: $module") if DEBUG;
             class($module)->load;
         }
         else {
-            # otherwise we create a subclass of the table_base class 
+            # otherwise we create a subclass of the table_base class
             $module = $self->table_subclass($name);
             $self->debug("Creating table subclass for $name: $module") if DEBUG;
             class($module)->base( $self->{ table_base } );
@@ -121,16 +121,16 @@ sub table {
 sub table_subclass {
     my ($self, $table) = @_;
 
-    # generate the name of a subclass of the table_base class with a unique 
-    # name based on the names of the database and table, 
+    # generate the name of a subclass of the table_base class with a unique
+    # name based on the names of the database and table,
     #   e.g. Badger::Database::Table::_autogen::mydb::users
 
-    join( 
-        PKG, 
-        $self->{ table_base }, 
-        AUTOGEN, 
-        $self->{ engine }->safe_name, 
-        $table 
+    join(
+        PKG,
+        $self->{ table_base },
+        AUTOGEN,
+        $self->{ engine }->safe_name,
+        $table
     );
 }
 
@@ -146,12 +146,12 @@ sub can {
         return $code;
     }
 
-    # otherwise see if the method name can be mapped onto the name of 
+    # otherwise see if the method name can be mapped onto the name of
     # a table or a record produced by a table.
     my $altname = $name;
     my ($table, $method);
     no strict REFS;
-    
+
     $self->debug("Looking for $name\n") if DEBUG;
 
     if ($altname =~ s/_table$//) {
@@ -159,20 +159,20 @@ sub can {
         $self->debug("$name has _table suffix, looking for $altname table") if DEBUG;
         if ($table = $self->has_table($altname)) {
             $self->debug("model has $altname table: $table") if DEBUG;
-            $code = $self->_generate_table_method($table);
+            $code = $self->_generate_table_method($altname, $table);
         }
         else {
             $self->debug("model does not have $altname table") if DEBUG;
         }
     }
     elsif ($altname =~ s/_record$//) {
-        # a method ending _record() is mapped to the fetch() method on the 
-        # corresponding table, e.g. $model->users_record() does the same 
+        # a method ending _record() is mapped to the fetch() method on the
+        # corresponding table, e.g. $model->users_record() does the same
         # thing as $model->users->fetch()
         $self->debug("$name has _record suffix, looking for $altname table/record") if DEBUG;
         if ($table = $self->has_table($altname) || $self->has_record($altname)) {
             $self->debug("model has $altname table/record: $table") if DEBUG;
-            $code = $self->_generate_record_method($table);
+            $code = $self->_generate_record_method($altname, $table);
         }
         else {
             $self->debug("model does not have $altname table/record") if DEBUG;
@@ -181,27 +181,27 @@ sub can {
     elsif ($table = $self->has_table($name)) {
         # if the method is the name of a table, then return the table
         $self->debug("model has $name table") if DEBUG;
-        $code = $self->_generate_table_method($table);
+        $code = $self->_generate_table_method($name, $table);
     }
     elsif ($table = $self->has_record($name)) {
         # or if it's the name of a record then call fetch() for the table
         $self->debug("model has $name record") if DEBUG;
-        $code = $self->_generate_record_method($table);
+        $code = $self->_generate_record_method($name, $table);
     }
     else {
         $self->debug("nothing found for $name") if DEBUG;
     }
 
-    # if we generated a new method then patch it into the symbol table 
+    # if we generated a new method then patch it into the symbol table
     $self->class->method( $name => $code )
         if $code;
 
     return $code;
 }
-    
+
 sub has_table {
     my ($self, $name) = @_;
-    return $self->{ tables }->{ $name } 
+    return $self->{ tables }->{ $name }
         && $self->table($name);
 }
 
@@ -223,12 +223,14 @@ sub hub {
 }
 
 sub _generate_table_method {
-    my ($self, $table) = @_;
+    my ($self, $name, $table) = @_;
+    $self->debug("generate table: $name => $table") if DEBUG;
     return sub { $table };
 }
 
 sub _generate_record_method {
-    my ($self, $table) = @_;
+    my ($self, $name, $table) = @_;
+    $self->debug("generate record: $name => $table") if DEBUG;
     return sub {
         my $this = shift;
         return $table->fetch(@_)
@@ -243,7 +245,7 @@ sub AUTOLOAD {
     return if $name eq 'DESTROY';
 
     # don't AUTOLOAD class methods
-    return $self->error_msg( class_autoload => $name, (caller())[1,2]) 
+    return $self->error_msg( class_autoload => $name, (caller())[1,2])
         unless ref $self;
 
     my $method = $self->can($name);
@@ -262,16 +264,16 @@ sub destroy {
     my $self = shift;
     my $msg  = shift || '';
     my ($tables, $table);
-    
+
     $self->debug(
-        "Destroying model", 
+        "Destroying model",
         length $msg ? " ($msg)" : ''
     ) if DEBUG;
 
     # notify any cached table objects that they have also lost the connection
     # and must clear any cached statement handles
     $tables = delete $self->{ table_cache };
-    
+
     foreach $table (values %$tables) {
         $table->destroy if $table;
     }
@@ -328,4 +330,3 @@ L<Badger::Database>, L<Badger::Database::Table>.
 # End:
 #
 # vim: expandtab shiftwidth=4:
-
