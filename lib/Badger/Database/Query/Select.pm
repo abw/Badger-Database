@@ -117,7 +117,7 @@ sub columns {
 #                $val = $columns->{ $_ } = $_;
 #	    }
             else {
-                $val = (($columns->{ $_ } || '') =~ /\W/) ? $_ : $table.DOT.$_;
+                $val = $self->column_name($_);
             }
             $val;
         }
@@ -129,6 +129,23 @@ sub columns {
     return $self;
 }
 
+sub column_name {
+    my ($self, $name) = @_;
+    my $column = $self->{ columns }->{ $name } || $name;
+
+    # If the table name is a single word column name then we prefix it
+    # with the name of the current table name.  e.g name => user.name
+    # Otherwise we leave it be
+    if ($column =~ /\W/) {
+        # name contains a non-word character so we assume it's a SQL
+        # fragment, e.g. "SUM(blah)", "foo.bar", etc.
+        return $column;
+    }
+    else {
+        # single word gets table prefix
+        return $self->table_name . DOT . $column;
+    }
+}
 
 sub table_name {
     my $self = shift;
@@ -204,7 +221,7 @@ sub prepare_sql {
     $sql =~ s/\n(\s*\n)+/\n/g;
     $sql =~ s/\n\s+/\n  /g;
 
-    if (DEBUG) {
+    if (DEBUG or $self->DEBUG) {
         $self->debug('SQL: ', $sql);
     }
 

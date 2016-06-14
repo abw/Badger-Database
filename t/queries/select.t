@@ -28,14 +28,14 @@ ok( $select, 'got select query module' );
 
 $select
     ->table('users')
-    ->columns('name, email')
+    ->columns('name', 'email')
     ->where('id=?')
     ->columns('age')
     ->order_by('age');
 
 is(
     $select->sql,
-    'SELECT name, email, age FROM users WHERE id=? ORDER BY age',
+    'SELECT users.name, users.email, users.age FROM users WHERE id=? ORDER BY age',
     'got generated SQL for database query'
 );
 
@@ -62,11 +62,12 @@ is(
 is(
     $users->select( 'id, name' )
         ->table('orders')
-        ->columns('orders.total')
+        ->columns('total')
+        ->columns('orders.total as grand_total')
         ->where('orders.id=?')
         ->where('users.id=?')
         ->sql,
-    'SELECT id, name, orders.total FROM badger_test_users, orders WHERE orders.id=? AND users.id=?',
+    'SELECT id, name, orders.total, orders.total as grand_total FROM badger_test_users, orders WHERE orders.id=? AND users.id=?',
     'got generated SQL for query with multiple where() clauses'
 );
 
