@@ -225,14 +225,15 @@ sub hub {
 sub _generate_table_method {
     my ($self, $name, $table) = @_;
     $self->debug("generate table: $name => $table") if DEBUG;
-    return sub { $table };
+    return sub { shift->table($name) };
 }
 
 sub _generate_record_method {
     my ($self, $name, $table) = @_;
     $self->debug("generate record: $name => $table") if DEBUG;
     return sub {
-        my $this = shift;
+        my $this  = shift;
+        my $table = $self->table($name);
         return $table->fetch(@_)
             || $this->decline($table->reason);
     };
