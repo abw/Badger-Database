@@ -32,8 +32,8 @@ use Badger::Class
         value    => \&values,
     },
     config    => [
-        'select|class::SELECT',
-        'columns|class::COLUMNS',
+        'select|class:SELECT',
+        'columns|class:COLUMNS',
         'from|table|class:FROM|class:TABLE',
         'join|class:JOIN',
         'where|class:WHERE',
