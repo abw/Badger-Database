@@ -19,6 +19,7 @@ use Badger::Class
     import    => 'class',
     constants => 'DELIMITER ARRAY DOT',
     words     => 'AND OR SELECT FROM WHERE',
+    utils     => 'split_to_list',
     constant  => {
         GROUP_BY => 'GROUP BY',
         ORDER_BY => 'ORDER BY',
@@ -82,8 +83,13 @@ sub init {
     my $columns = delete $self->{ columns };
 
     if ($columns) {
-        $columns = [ split(DELIMITER, $columns) ]
-            unless ref $columns eq ARRAY;
+        unless (ref $columns eq ARRAY) {
+            for ($columns) {
+                s/^\s+//g;
+                s/\s+$//g;
+            }
+            $columns = split_to_list($columns);
+        }
         $self->columns($columns);
     }
 
@@ -103,8 +109,6 @@ sub columns {
     my $table   = $self->table_name;
     my $val;
 
-    $self->debug("new columns(): ", $self->dump_data($newcols)) if DEBUG;
-
     $self->select(
         # prefix the column names with the name of the last table specified
         map  {
@@ -112,12 +116,12 @@ sub columns {
             if (ref $_ eq ARRAY) {
                 $val = $columns->{ $_->[1] } = $_->[0] . ' AS ' . $_->[1];
             }
-#            elsif ($_ =~ s/^=//) {
-#		$self->debug("FIXED field: $_\n");
-#                $val = $columns->{ $_ } = $_;
-#	    }
+#           elsif ($_ =~ s/^=//) {
+#		        $self->debug("FIXED field: $_\n");
+#               $val = $columns->{ $_ } = $_;
+#	        }
             else {
-                $val = $self->column_name($_);
+                $val = $columns->{ $_ } = $self->column_name($_);
             }
             $val;
         }
