@@ -74,17 +74,19 @@ sub init_remote_key {
 sub fetch {
     my $self = shift;
     my $meta = $self->meta;
-
-    $self->debug("Fetching many relation from $meta->{ table }->{ table } [$meta->{ fkey } => $meta->{ id }]\n") if DEBUG;
-
-    my $items = $meta->{ table }->fetch_all({
+    my $conf = {
         $meta->{ fkey  } => $meta->{ id },
         $meta->{ where } ? %{ $meta->{ where } } : (),
         $meta->{ order } ? (order => $meta->{ order }) : ()
-    });
+    };
+
+    $self->debug("Fetching many relation from $meta->{ table }->{ table } [$meta->{ fkey } => $meta->{ id }]\n") if DEBUG;
+    #$self->debug("fetch spec: ", $self->dump_data($conf)) if DEBUG;
+
+    my $items = $meta->{ table }->fetch_all($conf);
     @$self = @$items;
 
-    $self->debug("fetched") if DEBUG;
+    $self->debug("fetched ", scalar(@$items), " items") if DEBUG;
 
     return $self;
 }
