@@ -8,9 +8,6 @@ use Badger::Class
         DRIVER => 'MariaDB',
     };
 
-our $OPTIONS = {
-};
-
 sub dsn {
     my $self = shift;
 
@@ -35,19 +32,6 @@ Badger::Database::Engine::MariaDB - database engine for MariaDB
 This module implements a subclass of the L<Badger::Database::Engine> module,
 providing methods specific to the MariaDB database.
 
-=head1 CONFIGURATION OPTIONS
-
-The following configuration option is available in addition to those
-inherited from the L<Badger::Database::Engine> base class.
-
-=head2 reconnect
-
-The option indicates that the engine should attempt to reconnect to the
-MySQL database in the case that the connection is dropped (the infamous
-"MySQL server has gone away" problem).  It is set to C<1> by default.
-You can explicitly set it to C<0> if you don't want the engine to reconnect
-automatically for some reason.
-
 =head1 METHODS
 
 This module inherits all the method from the L<Badger::Database::Engine>
@@ -58,11 +42,6 @@ specific to MySQL.
 
 This methods generates the L<DBI> connection string (DSN: Data Source
 Notation) in the required format for MySQL.
-
-=head2 insert_id()
-
-Custom method for MariaDB to return the insert ID of the most recently
-inserted record.
 
 =head1 AUTHOR
 
