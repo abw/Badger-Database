@@ -14,7 +14,7 @@ sub dsn {
     return $self->{ dsn } ||= do {
         my ($name, $host, $port) = @$self{ qw( database host port ) };
         $name = "database=$name"    if ($port || $host);
-        $name = "port=$port;$name"  if $port;
+        $name = "port=$port;$name"  if $port && $host ne 'localhost';
         $name = "host=$host;$name"  if $host;
         join(':', 'DBI', $self->{ driver }, $name);
     };
