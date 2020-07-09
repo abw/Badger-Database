@@ -178,7 +178,7 @@ functionality to handle reconnection to the MySQL server if necessary.
 This methods generates the L<DBI> connection string (DSN: Data Source
 Notation) in the required format for MySQL.
 
-=head2 query()
+=head2 execute_query()
 
 This method overrides the default method in the base class.  It adds
 additional checking for the case where the MySQL server can "go away"

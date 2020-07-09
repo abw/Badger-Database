@@ -8,6 +8,10 @@ use Badger::Class
         DRIVER => 'MariaDB',
     };
 
+our $OPTIONS = {
+    mariadb_auto_reconnect => 1,
+};
+
 sub dsn {
     my $self = shift;
 
@@ -19,6 +23,7 @@ sub dsn {
         join(':', 'DBI', $self->{ driver }, $name);
     };
 }
+
 
 1;
 
