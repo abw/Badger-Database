@@ -648,7 +648,7 @@ sub has_field {
 
 sub has_relation {
     my ($self, $name) = @_;
-    return $self->{ method }->{ $name };
+    return $self->{ methods }->{ $name };
 }
 
 sub model {

@@ -3,7 +3,7 @@
 # Badger::Database::Relation
 #
 # DESCRIPTION
-#   Base class object for representing relations between records in 
+#   Base class object for representing relations between records in
 #   database tables.
 #
 # AUTHOR
@@ -26,10 +26,10 @@ use Badger::Class
 our $INSTANCE = { };     # inside-out store for object instance data
 
 sub meta {
-    # Create a new $METADATA object to store the metadata (table name, key, etc) 
+    # Create a new $METADATA object to store the metadata (table name, key, etc)
     # for the relation and store it inside-out in $INSTANCE, using the object ref
     # id as the key.  This means we don't have to pollute our hashes with metadata
-    # and can also use list-based objects 
+    # and can also use list-based objects
     $INSTANCE->{"$_[0]"} ||= METADATA->new;
 }
 
@@ -73,7 +73,7 @@ sub new {
     bless { %$args }, $class;
 }
 
-    
+
 1;
 
 =head1 NAME

@@ -27,7 +27,7 @@ use Badger::Class
     };
 
 # the config module is created by Makefile.PL and exports the
-# $ENGINE, $DATABASE, $USERNAME and $PASSWORD package variables 
+# $ENGINE, $DATABASE, $USERNAME and $PASSWORD package variables
 # that will be used as default connection parameters.
 
 use Badger::Test::DBConfig;
@@ -41,21 +41,21 @@ skip_all("You said you didn't want to run the tests against a real database")
 # define some custom queries
 #-----------------------------------------------------------------------
 
-our $QUERIES = { 
+our $QUERIES = {
     drop_users    => 'DROP TABLE IF EXISTS badger_test_users;',
     drop_addrs    => 'DROP TABLE IF EXISTS badger_test_addresses;',
     drop_orders   => 'DROP TABLE IF EXISTS badger_test_orders;',
     drop_items    => 'DROP TABLE IF EXISTS badger_test_order_items;',
     drop_sessions => 'DROP TABLE IF EXISTS badger_test_sessions;',
-    create_users  => 
+    create_users  =>
         'CREATE TABLE badger_test_users (
             id          <serial_type>,
             username    CHAR(32) NOT NULL,
             password    CHAR(32) NOT NULL,
             name        CHAR(64) NOT NULL,
             address_id  <serial_ref>
-         );',
-    create_addrs => 
+        );',
+    create_addrs =>
         'CREATE TABLE badger_test_addresses (
             id          <serial_type>,
             line1       CHAR(64) NOT NULL,
@@ -63,28 +63,28 @@ our $QUERIES = {
             town        CHAR(64) NOT NULL,
             region      CHAR(64) NOT NULL,
             country     CHAR(64) NOT NULL
-         );',
-    create_orders => 
+        );',
+    create_orders =>
         'CREATE TABLE badger_test_orders (
             id          <serial_type>,
             user_id     <serial_ref> NOT NULL,
             deliver_to  <serial_ref> NOT NULL,
             date        CHAR(24) NOT NULL
-         );',
-    create_items => 
+        );',
+    create_items =>
         'CREATE TABLE badger_test_order_items (
             id          <serial_type>,
             order_id    <serial_ref> NOT NULL,
             line_no     INTEGER NOT NULL,
             product     CHAR(24) NOT NULL,
             quantity    INTEGER NOT NULL
-         );',
-    create_sessions => 
+        );',
+    create_sessions =>
         "CREATE TABLE badger_test_sessions (
             id          <serial_type>,
             data        TEXT,
             status      CHAR(24)
-         );",
+        );",
 };
 
 
@@ -145,7 +145,7 @@ our $TABLES = {
         fields => 'order_id line_no product quantity',
         update => 'line_no',
     },
-    # NOTE: no table definition for sessions so that we can test the 
+    # NOTE: no table definition for sessions so that we can test the
     # dynamic table definition capability - see t/database/tables.t
 };
 
@@ -160,7 +160,7 @@ our $RECORDS = {
     order      => 'orders',
     order_item => 'order_items',
 };
-            
+
 
 
 #-----------------------------------------------------------------------
@@ -190,7 +190,7 @@ sub create_test_tables {
 
 sub insert_test_address {
     my $self = shift;
-    
+
     $self->table('addresses')->insert(
         line1   => '42 Infinity Drive',
         town    => 'Guildford',
@@ -202,7 +202,7 @@ sub insert_test_address {
 
 sub insert_test_user {
     my $self = shift;
-    
+
     $self->table('users')->insert(
         name       => 'Arthur Dent',
         username   => 'dent',
