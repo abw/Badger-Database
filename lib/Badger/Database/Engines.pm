@@ -8,8 +8,9 @@ use Badger::Factory::Class
     words   => 'HASH',
     engines => {
         # alternate names/cases
-        pg     => 'Badger::Database::Engine::Postgres',
-        sqlite => 'Badger::Database::Engine::SQLite',
+        pg      => 'Badger::Database::Engine::Postgres',
+        sqlite  => 'Badger::Database::Engine::SQLite',
+        mariadb => 'Badger::Database::Engine::MariaDB',
     };
 
 

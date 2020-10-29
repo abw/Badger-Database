@@ -21,7 +21,7 @@ use constant {
     CONFIG_FILE => 'database.cfg',
 };
 
-our @ENGINES   = qw( mysql SQLite Pg );
+our @ENGINES   = qw( mysql SQLite Pg MariaDB );
 our @INSULTS   = (
     # Installing software can be such a boring process, but not as boring
     # as writing installation software.  Insulting users makes it more fun.
@@ -37,7 +37,7 @@ make_data_subs();
 
 eval "use DBI";
 die no_dbi()   if $@;                                   # must have DBI
-die help()     if grep /--?h(elp)?/, @ARGV;             # -h / --help 
+die help()     if grep /--?h(elp)?/, @ARGV;             # -h / --help
 my $picky       = grep /--?c(onfig)?/, @ARGV;           # -c / --config
 my $dir         = Dir($Bin);                            # where are we?
 my $tmp_dir     = $dir->dir(TMP_DIR)->must_exist(1);    # create tmp dir
@@ -48,7 +48,7 @@ my $db_config   = db_config();                          # grok DB config from us
 my $makefile    = {
     NAME         => 'Badger-Database',
     VERSION_FROM => 'lib/Badger/Database.pm',
-    PMLIBDIRS    => [ 'lib' ], 
+    PMLIBDIRS    => [ 'lib' ],
     PREREQ_PM    => {
         Badger   => 0.09,
         DBI      => 1.604,
@@ -85,7 +85,7 @@ sub make_data_subs {
     my $subs = { };
     my $args = { };
     my $sub;
-    
+
     while (@data) {
         my $line = shift @data;
         chomp $line;
@@ -109,7 +109,7 @@ sub make_data_subs {
             die "Found text in DATA section outside sub definition: $line\n";
         }
     }
-    
+
     while (my ($name, $lines) = each %$subs) {
         no strict 'refs';
         my $text = join("\n", @$lines) . "\n";
@@ -147,7 +147,7 @@ sub db_config {
         database => $sqlite_file,
     };
     my $config;
-    
+
     unless (%$drivers) {
         die got_none($supported);
     }
@@ -170,10 +170,10 @@ sub db_config {
             'n'
         );
         $db_tests = ($db_tests =~ /y/i);
-        
+
         if ($db_tests) {
             my ($driver, $database, $username, $password);
-        
+
             print "\n", select_driver($supported);
 
             my $n = 0;
@@ -194,7 +194,7 @@ sub db_config {
                 while (! $database) {
                     $database = prompt("Enter database name:");
                 }
-        
+
                 $config = {
                     db_tests => 1,
                     engine   => $driver,
@@ -210,7 +210,7 @@ sub db_config {
             };
         }
     }
-    
+
     return $config;
 }
 
@@ -229,7 +229,7 @@ sub write_db_config {
     );
     $file->write($text, "\n\n1;\n");
 }
-    
+
 
 
 __END__
@@ -251,62 +251,62 @@ FAIL!
 __got_none(supported)__
 FAIL!
     Oh Crikey!  You don't appear to have any of the supported database
-    drivers installed.  Right now, we have engines for the following 
+    drivers installed.  Right now, we have engines for the following
     database drivers:
-    
+
         $supported
-    
-    The Badger::Engine::* modules are very thin wrappers around the 
+
+    The Badger::Engine::* modules are very thin wrappers around the
     respective DBI and DBD modules.  If your favourite database isn't
     supported then perhaps you could create a new engine module for it,
-    or adapt an existing one to fit? 
-    
-    Sorry to get your hopes up and then dash them cruelly against the 
-    rocks of unsupported software.  Rest assured that we won't sleep 
+    or adapt an existing one to fit?
+
+    Sorry to get your hopes up and then dash them cruelly against the
+    rocks of unsupported software.  Rest assured that we won't sleep
     well tonight, knowing that we've let you down so badly.
 
 __got_sqlite__
 NICE ONE!
-    You've got SQLite installed.  That's good because it means we don't 
+    You've got SQLite installed.  That's good because it means we don't
     have to pester you for the name of an existing database, username,
-    password, and so on.  We'll create a local SQLite database in the 
+    password, and so on.  We'll create a local SQLite database in the
     'tmp' sub-directory and use that for most of the live database tests.
 
 __got_others__
-    If you want to test Badger::Database against a different database 
+    If you want to test Badger::Database against a different database
     then re-run this script with the --config option, like this:
-    
+
         $ perl Makefile.PL --config
 
 __got_sqlite_and_others__
 WAY TO GO!
-    You've got SQLite installed.  That's the easiest option for running 
+    You've got SQLite installed.  That's the easiest option for running
     the tests as it means we don't have to pester you for the name of an
-    existing database, username, password, and so on.  We can create a 
+    existing database, username, password, and so on.  We can create a
     local SQLite database in the 'tmp' sub-directory and use that for most
     of the live database tests.
-    
-    You've also got other suitable database drivers installed.  If you 
+
+    You've also got other suitable database drivers installed.  If you
     want to test Badger::Database against a database other than SQLite
     then enter the details below.
 
 __no_sqlite__
 SHAME!
-    You don't appear to have SQLite installed.  That's a shame because it 
-    means we now have to pester you for the name of an existing database, 
+    You don't appear to have SQLite installed.  That's a shame because it
+    means we now have to pester you for the name of an existing database,
     username, password, and so on if you want to run the tests against a
-    real database.  
+    real database.
 
 __warning__
 IMPORTANT!  LISTEN UP!
-    You must provide the name of a database that already exists and is 
-    suitable for destructive testing.  You must provide a username and 
-    password to connect to the database (if required) with sufficient 
-    permission to create and drop tables, and to insert, select, update 
+    You must provide the name of a database that already exists and is
+    suitable for destructive testing.  You must provide a username and
+    password to connect to the database (if required) with sufficient
+    permission to create and drop tables, and to insert, select, update
     and delete records.
-    
+
     For obvious reasons you SHOULD NOT provide the name of a database
-    containing any data that you want to keep!  If necessary, go and 
+    containing any data that you want to keep!  If necessary, go and
     create a new test database now (e.g. `mysqladmin create test`).
 
 __select_driver(supported)__

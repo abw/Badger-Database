@@ -1,0 +1,20 @@
+# Sample script to create a test database for MariaDB.
+# Adapt as necessary
+MYSQL_ADMIN=/usr/local/bin/mysqladmin
+MYSQL=/usr/local/bin/mysql
+DATABASE=test
+USERNAME=test
+PASSWORD=test
+HOSTNAME=localhost
+
+echo Creating MySQL database: $DATABASE
+$MYSQL_ADMIN create $DATABASE
+
+echo "Granting access to user $USERNAME"
+
+$MYSQL --default-character-set=utf8 mysql <<EOF || exit
+
+GRANT SELECT, INSERT, UPDATE, DELETE, INDEX,
+    ALTER, CREATE, DROP, LOCK TABLES, REFERENCES
+    ON $DATABASE.* TO $USERNAME@$HOSTNAME IDENTIFIED BY '$PASSWORD';
+EOF

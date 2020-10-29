@@ -12,12 +12,21 @@ use strict;
 use warnings;
 use lib qw( ./lib ../lib ../../lib );
 use Badger::Test
-    tests => 6,
+    #tests => 6,
     debug => 'Badger::Database::Engine Badger::Config',
     args  => \@ARGV;
 
 use Badger::Database::Engine;
+use Badger::Test::DBConfig;     # imports $ENGINE, $DATABASE, $USERNAME, etc...
 use constant Engine => 'Badger::Database::Engine';
+
+BEGIN {
+    eval "use DBD::mysql";
+    skip_all("You don't have DBD::mysql installed") if $@;
+    skip_all("You said you didn't want to run the extended tests") unless $DB_TESTS;
+    skip_all("You're not using MySQL for the extended tests") unless $ENGINE =~ /^mysql$/i;
+    plan(6);
+}
 
 my $engine = eval { Engine->new };
 ok( ! $engine, 'failed to create default engine' );
