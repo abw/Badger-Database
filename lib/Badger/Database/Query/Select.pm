@@ -18,7 +18,7 @@ use Badger::Class
     base      => 'Badger::Database::Query',
     import    => 'class',
     constants => 'DELIMITER ARRAY DOT',
-    words     => 'AND OR SELECT FROM WHERE',
+    words     => 'AND OR SELECT FROM WHERE HAVING',
     utils     => 'split_to_list',
     constant  => {
         GROUP_BY => 'GROUP BY',
@@ -38,6 +38,7 @@ use Badger::Class
         'from|table|class:FROM|class:TABLE',
         'join|class:JOIN',
         'where|class:WHERE',
+        'having|class:HAVING',
         'order|order_by|class:ORDER|class:ORDER_BY',
         'group|group_by|class:GROUP|class:GROUP_BY',
     ];
@@ -47,6 +48,7 @@ our $JOINTS = {
     from   => ', ',
     join   => ' ',
     where  => ' AND ',
+    having => ' AND ',
     order  => ', ',
     group  => ', ',
 };
@@ -209,6 +211,11 @@ sub prepare_sql {
         @sql,
         $self->GROUP_BY => $frags->{ group }
     ) if $frags->{ group };
+
+    push(
+        @sql,
+        $self->HAVING => $frags->{ having }
+    ) if $frags->{ having };
 
     push(
         @sql,
