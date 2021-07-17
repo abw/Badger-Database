@@ -54,7 +54,7 @@ sub prepare {
 sub sth {
     my $self = shift;
     return $self->{ sth }
-       ||= $self->prepare_sth;
+        ||= $self->prepare_sth;
 }
 
 sub prepare_sth {

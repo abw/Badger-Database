@@ -27,10 +27,11 @@ use Badger::Class
         AFTER    => '',
     },
     alias     => {
-        table    => \&from,
-        order_by => \&order,
-        group_by => \&group,
-        value    => \&values,
+        table        => \&from,
+        order_by     => \&order,
+        group_by     => \&group,
+        value        => \&values,
+        having_value => \&having_values,
     },
     config    => [
         'select|class:SELECT',
@@ -53,7 +54,7 @@ our $JOINTS = {
     group  => ', ',
 };
 our @FRAGMENTS = keys %$JOINTS;
-our @LIST_ARGS = (@FRAGMENTS, qw( values ));
+our @LIST_ARGS = (@FRAGMENTS, qw( values having_values ));
 
 class->methods(
     map {
@@ -176,7 +177,6 @@ sub sql_fragments {
     return $frags;
 }
 
-
 sub prepare_sql {
     my $self  = shift;
     my $frags = $self->sql_fragments;
@@ -239,13 +239,12 @@ sub prepare_sql {
     return $sql;
 }
 
-
-
 sub execute {
-    my $self = shift;
-    my $vals = $self->{ values };
+    my $self  = shift;
+    my $vals  = $self->{ values };
+    my $hvals = $self->{ having_values };
     # push any cached values onto arguments list
-    return $self->{ engine }->execute_query( $self, @$vals, @_ );
+    return $self->{ engine }->execute_query( $self, @$vals, @$hvals, @_ );
 }
 
 
