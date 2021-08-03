@@ -37,7 +37,7 @@ sub fetch {
 
     my $items = $meta->{ table }->fetch_all({
         $meta->{ fkey } => $meta->{ id },
-        order           => $meta->{ index },
+        order           => $self->backquote( $meta->{ index } ),
         $meta->{ where } ? %{ $meta->{ where } } : (),
     });
 
@@ -222,6 +222,7 @@ sub renumber {
     my $start  = shift || 0;
     my $meta   = $self->meta;
     my $index  = $meta->{ index };
+    my $qtndx  = $self->backquote($index);
     my $table  = $meta->{ table };
     my @where  = ($meta->{ fkey });
     my @values = ($delta, $start, $meta->{ id });
@@ -235,7 +236,7 @@ sub renumber {
 
     $where = join(' AND ', map { $_ . '=?' } @where);
     $qname = join('_', 'list_renumber', $index, @where);
-    $query = "UPDATE <table> SET $index=$index+? WHERE $index>=? AND $where";
+    $query = "UPDATE <table> SET $qtndx=$qtndx+? WHERE $qtndx>=? AND $where";
 
     # TODO: generate this from a meta-query
     # This is broken

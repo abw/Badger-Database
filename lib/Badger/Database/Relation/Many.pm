@@ -77,7 +77,7 @@ sub fetch {
     my $conf = {
         $meta->{ fkey  } => $meta->{ id },
         $meta->{ where } ? %{ $meta->{ where } } : (),
-        $meta->{ order } ? (order => $meta->{ order }) : ()
+        $meta->{ order } ? (order => $self->backquote_order($meta->{ order })) : ()
     };
 
     $self->debug("Fetching many relation from $meta->{ table }->{ table } [$meta->{ fkey } => $meta->{ id }]\n") if DEBUG;

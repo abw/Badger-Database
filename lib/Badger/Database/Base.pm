@@ -16,6 +16,7 @@ use Badger::Debug ':dump';
 use Badger::Class
     version  => 0.01,
     base     => 'Badger::Base',
+    debug    => 0,
     constant => {
         ENGINE  => 'Badger::Database::Engine',
         QUERY   => 'Badger::Database::Query',
@@ -27,15 +28,15 @@ use Badger::Class
         no_dbh       => 'Database is not connected',
         no_engine    => 'No engine specified for the %s table',
         no_table     => 'No table specified',
-        no_query     => 'No query specified', 
+        no_query     => 'No query specified',
         no_keys      => 'No keys are defined for the %s table',
         no_ident     => 'No identifying key(s) specified to %s for the %s table',
         no_fields    => 'No valid fields were specified to %s for %s table',
         no_param     => "No '%s' parameter specified to %s for the %s table",
         multi_keys   => 'Multiple keys are defined for the %s table',
         bad_args     => 'Invalid argument(s) specified to %s: %s',
-        bad_query    => 'Invalid query name specified: %s', 
-        bad_meta     => 'Invalid meta-query name specified: %s', 
+        bad_query    => 'Invalid query name specified: %s',
+        bad_meta     => 'Invalid meta-query name specified: %s',
         bad_table    => 'The %s table is not defined in the database model',
         bad_record   => 'Invalid record specification for %s table: %s',
         new_record   => 'Failed to create new %s record object: %s',
@@ -44,17 +45,39 @@ use Badger::Class
         not_found    => 'Not found in %s table',
     };
 
+sub backquote {
+    my $self  = shift;
+    my $text  = shift;
+    my @parts = split(/\./, $text);
+    # e.g. foo.bar => `foo`.`bar`
+    return join('.', map { qq{`$_`} } @parts);
+}
+
+sub backquote_order {
+    my $self  = shift;
+    my $text  = shift;
+    my @parts = split(/,\s*/, $text);
+    # e.g. foo.bar desc, baz => `foo`.`bar` desc, `baz`
+    $self->debug_data( parts => \@parts ) if DEBUG;
+    return join(', ', map { s/(\S+)/$self->backquote($1)/e; $_ } @parts);
+}
 
 sub debug_method {
     my ($self, $method, @args) = @_;
     $self->debug_up(
         2,
-        $method, '(', 
+        $method, '(',
         join(', ', map { $self->dump_data($_) } @args),
         ')'
     );
 }
 
+
+sub debug_data {
+    my $self = shift;
+    my $text = shift;
+    $self->debug( $text => $self->dump_data(@_) );
+}
 
 1;
 
@@ -69,7 +92,7 @@ See L<Badger::Base>.
 =head1 DESCRIPTION
 
 This module is a base class for all other L<Badger::Database> modules.
-It is implemented as a very thin subclass of L<Badger::Base>.  
+It is implemented as a very thin subclass of L<Badger::Base>.
 
 The main thing it does is to define a number of custom message formats for
 other L<Badger::Database> modules to use (see

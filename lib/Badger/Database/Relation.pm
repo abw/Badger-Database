@@ -53,7 +53,6 @@ sub fkey {
     return $_[0]->meta->{ fkey };
 }
 
-
 #-----------------------------------------------------------------------
 # stub object for stored metadata that we can use for error reporting,
 # debugging, etc.
