@@ -370,3 +370,28 @@ sub DESTROY {
 }
 
 1;
+
+1;
+
+=head1 NAME
+
+Badger::Database::Queries - database query manager.
+
+=head1 DESCRIPTION
+
+This module is a manger for database queries.  It can be
+used stand-alone or as a base class for table modules.
+
+=head1 AUTHOR
+
+Andy Wardley E<lt>abw@wardley.orgE<gt>.
+
+=head1 COPYRIGHT
+
+Copyright (C) 2005-2022 Andy Wardley.  All Rights Reserved.
+
+=head1 SEE ALSO
+
+L<Badger::Database::Query>
+
+=cut

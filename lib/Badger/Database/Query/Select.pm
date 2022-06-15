@@ -249,3 +249,26 @@ sub execute {
 
 
 1;
+
+=head1 NAME
+
+Badger::Database::Query::Select - query for database SELECTs
+
+=head1 DESCRIPTION
+
+This module provides a programmatic way to generate SELECT
+queries.
+
+=head1 AUTHOR
+
+Andy Wardley E<lt>abw@wardley.orgE<gt>.
+
+=head1 COPYRIGHT
+
+Copyright (C) 2005-2022 Andy Wardley.  All Rights Reserved.
+
+=head1 SEE ALSO
+
+L<Badger::Database::Query>
+
+=cut

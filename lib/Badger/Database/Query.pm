@@ -150,9 +150,7 @@ programmatically.
 =head1 METHODS
 
 The following methods are defined in addition to those inherited from the
-L<Cog::Query::Scheme:Search>, L<Contentity::Database::Search>,
-L<Badger::Database::Query::Select>, L<Badger::Database::Query>,
-L<Badger::Database::Base>, L<Badger::Base> and L<Cog::Base> classes.
+L<Badger::Database::Base> and L<Badger::Base> modules.
 
 =head2 sql()
 

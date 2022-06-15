@@ -103,7 +103,7 @@ It is an alias to the L<item()|Badger::Factory/item()> method inherited from
 L<Badger::Factory>.
 
 The first argument is the database engine type, corresponding to one of the
-L<Badger::Database::Engine::*|Badger::Database::Engine> modules.
+L<Badger::Database::Engine> modules.
 The remaining arguments are the connection parameters for the database.
 
     my $engine = $engines->engine(
