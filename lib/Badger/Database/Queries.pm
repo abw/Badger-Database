@@ -371,8 +371,6 @@ sub DESTROY {
 
 1;
 
-1;
-
 =head1 NAME
 
 Badger::Database::Queries - database query manager.
