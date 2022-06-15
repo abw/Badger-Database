@@ -241,6 +241,7 @@ sub list {
 
 1;
 __END__
+
 =head1 NAME
 
 Badger::Database::Relation::Many - one-to-many database relation object
