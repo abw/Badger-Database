@@ -127,10 +127,29 @@ sub size {
 1;
 __END__
 
-# Local Variables:
-# mode: Perl
-# perl-indent-level: 4
-# indent-tabs-mode: nil
-# End:
-#
-# vim: expandtab shiftwidth=4:
+=head1 NAME
+
+Badger::Database::Relation::Map - mapping one-to-many database relation object
+
+=head1 DESCRIPTION
+
+This module implements a base class for a one-to-many database relation
+mapped via an index key.
+
+=head1 AUTHOR
+
+Andy Wardley L<http://wardley.org/>
+
+=head1 COPYRIGHT
+
+Copyright (C) 2007-2022 Andy Wardley.  All Rights Reserved.
+
+This module is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself.
+
+=head1 SEE ALSO
+
+L<Badger::Database::Relation>, L<Badger::Database::Table>.
+
+=cut
+

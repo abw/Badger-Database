@@ -278,16 +278,32 @@ sub shift {
     return $size == 1 ? @$kids : wantarray ? @$kids : $kids;
 }
 
-
-
-
 1;
+
 __END__
 
-# Local Variables:
-# mode: Perl
-# perl-indent-level: 4
-# indent-tabs-mode: nil
-# End:
-#
-# vim: expandtab shiftwidth=4:
+=head1 NAME
+
+Badger::Database::Relation::List - ordered one-to-many list relation
+
+=head1 DESCRIPTION
+
+This module implements a base class for an ordered one-to-many database relation.
+
+=head1 AUTHOR
+
+Andy Wardley L<http://wardley.org/>
+
+=head1 COPYRIGHT
+
+Copyright (C) 2007-2022 Andy Wardley.  All Rights Reserved.
+
+This module is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself.
+
+=head1 SEE ALSO
+
+L<Badger::Database::Relation>, L<Badger::Database::Table>.
+
+=cut
+

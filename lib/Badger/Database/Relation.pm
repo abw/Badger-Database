@@ -79,17 +79,9 @@ sub new {
 
 Badger::Database::Relation - base class database relation object
 
-=head1 SYNOPSIS
-
-TODO
-
 =head1 DESCRIPTION
 
-TODO
-
-=head1 METHODS
-
-TODO
+This module implements a base class for a database relation.
 
 =head1 AUTHOR
 
@@ -97,7 +89,7 @@ Andy Wardley L<http://wardley.org/>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2007-2009 Andy Wardley.  All Rights Reserved.
+Copyright (C) 2007-2022 Andy Wardley.  All Rights Reserved.
 
 This module is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
@@ -107,12 +99,4 @@ under the same terms as Perl itself.
 L<Badger::Database>, L<Badger::Database::Table>.
 
 =cut
-
-# Local Variables:
-# mode: Perl
-# perl-indent-level: 4
-# indent-tabs-mode: nil
-# End:
-#
-# vim: expandtab shiftwidth=4:
 

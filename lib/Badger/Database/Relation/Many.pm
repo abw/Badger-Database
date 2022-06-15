@@ -241,11 +241,28 @@ sub list {
 
 1;
 __END__
+=head1 NAME
 
-# Local Variables:
-# mode: Perl
-# perl-indent-level: 4
-# indent-tabs-mode: nil
-# End:
-#
-# vim: expandtab shiftwidth=4:
+Badger::Database::Relation::Many - one-to-many database relation object
+
+=head1 DESCRIPTION
+
+This module implements a base class for a one-to-many database relation.
+
+=head1 AUTHOR
+
+Andy Wardley L<http://wardley.org/>
+
+=head1 COPYRIGHT
+
+Copyright (C) 2007-2022 Andy Wardley.  All Rights Reserved.
+
+This module is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself.
+
+=head1 SEE ALSO
+
+L<Badger::Database::Relation>, L<Badger::Database::Table>.
+
+=cut
+
