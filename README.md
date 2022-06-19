@@ -417,6 +417,7 @@ to determine which of these modules should be used, loads it, and
 then delegates to the `new()` method of that subclass.
 
 We currently have support for MySQL ([Badger::Database::Engine::Mysql](https://metacpan.org/pod/Badger%3A%3ADatabase%3A%3AEngine%3A%3AMysql)),
+MariaDB ([Badger::Database::Engine::MariaDB](https://metacpan.org/pod/Badger%3A%3ADatabase%3A%3AEngine%3A%3AMariaDB)),
 Postgres ([Badger::Database::Engine::Postgres](https://metacpan.org/pod/Badger%3A%3ADatabase%3A%3AEngine%3A%3APostgres)) and SQLite
 ([Badger::Database::Engine::SQLite](https://metacpan.org/pod/Badger%3A%3ADatabase%3A%3AEngine%3A%3ASQLite)). Adding support for other databases
 should be trivial as most subclasses only need to implement one or two simple

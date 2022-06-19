@@ -655,6 +655,7 @@ to determine which of these modules should be used, loads it, and
 then delegates to the C<new()> method of that subclass.
 
 We currently have support for MySQL (L<Badger::Database::Engine::Mysql>),
+MariaDB (L<Badger::Database::Engine::MariaDB>),
 Postgres (L<Badger::Database::Engine::Postgres>) and SQLite
 (L<Badger::Database::Engine::SQLite>). Adding support for other databases
 should be trivial as most subclasses only need to implement one or two simple
