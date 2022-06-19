@@ -1,246 +1,8 @@
-package Badger::Database;
-
-use DBI;
-use Badger::Debug ':dump :debug';
-use Badger::Database::Engines;
-use Badger::Database::Model;
-use Badger::Class
-    debug     => 0,
-    base      => 'Badger::Database::Queries Badger::Prototype',
-    import    => 'class',
-    accessors => 'database host port',
-    utils     => 'self_params',
-    constants => 'ARRAY HASH PKG',
-    constant  => {
-        DB      => 'Badger::Database',
-        ENGINES => 'Badger::Database::Engines',
-        MODEL   => 'Badger::Database::Model',
-        AUTOGEN => '_autogen',
-    },
-    exports   => {
-        any   => 'DB',
-    },
-    config    => [
-       'dsn',                                    # optional dsn
-       'hub',                                    # optional hub reference
-       'options',                                # DBI option (rename to dbi_options?)
-       'engine|class:ENGINE!',                   # mandatory engine type
-       'driver|type|class:DRIVER',               # optional driver, to override engine
-       'database|name|class:DATABASE!',          # mandatory name of database
-       'username|user|class:USERNAME',           # optional login credentials and
-       'password|pass|class:PASSWORD',           # connection details...
-       'host|class:HOST',
-       'port|class:PORT',
-       'model|class:MODEL|method:MODEL!',        # name of model class
-       'table|class:TABLE',                      # optional name of table class
-     ];
-
-our $VERSION = 0.03;                    # for ExtUtils::MakeMaker
-
-class->methods(
-    name => \&database,
-);
-
-
-sub init {
-    my ($self, $config) = @_;
-
-    # init_engine() can do some extra massaging of $config
-    $self->init_engine($config);
-    $self->init_model($config);
-
-    # now call configure() again to merge config into $self
-    $self->configure($config);
-
-    # initialise the queries base class
-    $self->init_queries($config);
-
-    return $self;
-}
-
-
-sub init_engine {
-    my ($self, $config) = @_;
-
-    $self->debug("init()") if DEBUG;
-
-    if (my $dbh = $config->{ dbh }) {
-        $config->{ engine   } ||= $dbh->{ Driver }->{ Name };
-        $config->{ database } ||= $dbh->{ Name };
-    }
-
-    # Have the configure() method populate the $config hash with any
-    # default items instead of $self.  This is so that we can pass all
-    # the configuration items over to the engine module and any other
-    # delegate components
-    $self->configure( $config => $config );
-
-    # have the engine shed prepare an engine for us to use
-    $config->{ engine } = $self->engine(
-        $config->{ engine },
-        $config,
-    );
-}
-
-sub init_model {
-    my ($self, $config) = @_;
-
-    # merge any table/record definitions in database package into config
-    $config->{ tables  } = $self->class->hash_vars( TABLES  => $config->{ tables  } );
-    $config->{ records } = $self->class->hash_vars( RECORDS => $config->{ records } );
-
-    # create a model to manage any table definitions
-    $config->{ model } = $self->new_model($config);
-    $self->debug("model now set to $config->{model}") if DEBUG;
-}
-
-sub engine {
-    my $self = shift;
-    return @_
-        ? $self->ENGINES->engine(@_)
-        : $self->prototype->{ engine };
-}
-
-sub dbh {
-    shift->engine->dbh;
-}
-
-sub model {
-    my $self = shift;
-    $self->debug("model()") if DEBUG;
-
-    if (@_) {
-        return $self->new_model(@_);
-    }
-    else {
-        $self->debug("Returning prototype model for [$self]") if DEBUG;
-        return $self->prototype->{ model };
-    }
-}
-
-sub model_class {
-    my ($self, $params) = self_params(@_);
-
-    my $engine = $params->{ engine }
-        ||= $self->engine
-        ||  return $self->error_msg( missing => 'engine' );
-
-    # Models autogenerate methods to access tables on demand.  To avoid
-    # cross-pollution between two or more active models accessing different
-    # databases, we create a dynamic subclass of Badger::Database::Model
-    # with a name based on the database name,
-    #   e.g. Badger::Database::Model::_autogen::mydb
-    my $modclass = $self->MODEL;
-    my $subclass = join(
-        PKG,
-        $modclass,
-        AUTOGEN,
-        $engine->safe_name,
-    );
-    class($subclass)->base($modclass);
-
-    return $subclass;
-}
-
-sub new_model {
-    my ($self, $params) = self_params(@_);
-    my $modclass = $self->model_class($params);
-    $self->debug("Creating new $modclass model: ", $self->dump_data($params)) if DEBUG;
-    return $modclass->new($params);
-}
-
-sub table {
-    shift->model->table(@_);
-}
-
-sub tables {
-    shift->model->tables(@_);
-}
-
-sub insert_id {
-    shift->engine->insert_id(@_);
-}
-
-sub fragments {
-    my $self = shift;
-
-    # If called with multiple arguments then we delegate to the fragments()
-    # method in the Badger::Database::Queries subclass, which is a regular
-    # hash accessor/mutator method generated by Badger::Class::Methods.
-    # This will update the $self->{ fragments }, but we need to make sure
-    # that we regenerate the $self->{ all_fragments } which contains
-    # additional fragments specific to the database.
-    if (@_) {
-        $self->SUPER::fragments(@_);
-        delete $self->{ all_fragments };
-    }
-
-    return $self->{ all_fragments } ||= do {
-        my $dbase_frags  = $self->database_fragments;
-        my $config_frags = $self->{ fragments };
-        my $merged_frags = {
-            %$dbase_frags,
-            %$config_frags,
-        };
-        $self->debug(
-            "Merged all fragments: ",
-            $self->dump_data($merged_frags)
-        ) if DEBUG;
-        $merged_frags;
-    };
-}
-
-sub database_fragments {
-    my $self = shift;
-
-    return $self->{ database_fragments } ||= do {
-        my $engine = $self->{ engine };
-        {
-            serial_type => $engine->SERIAL_TYPE,
-            serial_ref  => $engine->SERIAL_REF,
-        };
-    };
-}
-
-sub disconnect {
-    shift->engine->disconnect;
-}
-
-sub destroy {
-    my $self = shift;
-    my $msg  = shift || '';
-
-    $self->debug(
-        "Destroying database",
-        length $msg ? " ($msg)" : ''
-    ) if DEBUG;
-
-    $msg = 'database destroyed';
-
-    # save engine reference before B::DB::Queries has a chance to delete it
-    my $engine = $self->engine;
-
-    # call Badger::Database::Queries base class destroy() to free queries
-    $self->SUPER::destroy($msg);
-
-    # call model's destroy() to free model, tables, queries, etc.
-    my $model = delete $self->{ model };
-    $model->destroy($msg) if $model;
-
-    # disconnect engine and delete reference
-    $engine->disconnect if $engine;
-    delete $self->{ engine };
-}
-
-
-1;
-
-
-=head1 NAME
+# NAME
 
 Badger::Database - database abstraction module
 
-=head1 SYNOPSIS
+# SYNOPSIS
 
     use Badger::Database;
 
@@ -324,20 +86,20 @@ Badger::Database - database abstraction module
     $user = $sth->fetchrow_hashref;
     print $user->{ name };
 
-=head1 DESCRIPTION
+# DESCRIPTION
 
-=head2 INTRODUCTION
+## INTRODUCTION
 
-The C<Badger::Database> module provides a simple, useful and moderately
+The `Badger::Database` module provides a simple, useful and moderately
 powerful interface to SQL databases, implemented as a thin wrapper around the
-L<DBI> module and related L<DBI::DBD> modules.
+[DBI](https://metacpan.org/pod/DBI) module and related [DBI::DBD](https://metacpan.org/pod/DBI%3A%3ADBD) modules.
 
-It is derived from the DBI plugin module for the L<Template Toolkit|Template>,
+It is derived from the DBI plugin module for the [Template Toolkit](https://metacpan.org/pod/Template),
 originally written by Simon Matthews in 2000. I rewrote it as stand-alone
 module in 2005 and started using it in a number of projects. It then proceeded
 to grow in various different directions up until 2008 when I finally got a
 chance to rein it it, clean it up and make it suitable for general release as
-part of the L<Badger> collective.
+part of the [Badger](https://metacpan.org/pod/Badger) collective.
 
 During that time there has been much activity in the Perl community and a
 number of other fine database modules have sprung into existence. This begs
@@ -346,33 +108,33 @@ the question: "Why do we need another one?".
 The short answer to that question is that I already had the code, was using it
 regularly, found it useful and convenient, and thought other people might too.
 That's not to say that there aren't more extensive and/or mature solutions out
-there now that you should be using instead. C<Badger::Database> is
-I<different>, not necessarily any I<better>.
+there now that you should be using instead. `Badger::Database` is
+_different_, not necessarily any _better_.
 
-C<Badger::Database> aims for convenience over complexity. It has a very
+`Badger::Database` aims for convenience over complexity. It has a very
 shallow learning curve that allows you to use it without having to first
 master any complex concepts.  If you're already familiar with the basics
-of using L<DBI> then C<Badger::Database> is no harder, and in some cases,
+of using [DBI](https://metacpan.org/pod/DBI) then `Badger::Database` is no harder, and in some cases,
 even easier.
 
 It does not set out to be a full-blown Object/Relational Mapping tool (ORM),
 nor does it go to great lengths to protect you from having to write SQL
-queries. That said, it I<does> have some level of support for both of those
+queries. That said, it _does_ have some level of support for both of those
 kinds of functionality, and more. We're happy to aim for the 80/20 sweet spot
-- if we can easily automate 80% of the more menial tasks then it leaves you
+\- if we can easily automate 80% of the more menial tasks then it leaves you
 free to concentrate on the remaining 20%.
 
 If you're looking for a full-blown ORM and don't mind a slightly steeper
-learning curve then you should consider using L<DBIx::Class> or L<Rose::DB>
-instead. The L<Fey> modules also look interesting in terms of robust SQL
+learning curve then you should consider using [DBIx::Class](https://metacpan.org/pod/DBIx%3A%3AClass) or [Rose::DB](https://metacpan.org/pod/Rose%3A%3ADB)
+instead. The [Fey](https://metacpan.org/pod/Fey) modules also look interesting in terms of robust SQL
 generation, although I haven't had the chance to use them in anger.
 
-C<Badger::Database> currently supports MySQL, SQLite and Postgres databases.
+`Badger::Database` currently supports MySQL, SQLite and Postgres databases.
 Adding support for other database engines is a relatively simple process.
 
-=head2 CONNECTING TO A DATABASE
+## CONNECTING TO A DATABASE
 
-Create a new C<Badger::Database> object to connect to an existing database.
+Create a new `Badger::Database` object to connect to an existing database.
 
     use Badger::Database;
 
@@ -383,31 +145,31 @@ Create a new C<Badger::Database> object to connect to an existing database.
         password => 's3kr1t',
     );
 
-The C<engine> parameter corresponds to a L<Badger::Database::Engine> module
+The `engine` parameter corresponds to a [Badger::Database::Engine](https://metacpan.org/pod/Badger%3A%3ADatabase%3A%3AEngine) module
 which abstracts some of the various subtle differences between different
-databases.  The C<database> parameter is the name of the database.  The
-optional C<username> and C<password> parameters can be used to supply the
+databases.  The `database` parameter is the name of the database.  The
+optional `username` and `password` parameters can be used to supply the
 relevant credentials if your database requires them.
 
-The C<Badger::Database> module will automatically connect to the database
-via a L<Badger::Database::Engine> module.  The database will be disconnected
-automatically when the C<Badger::Database> object goes out of scope and is
+The `Badger::Database` module will automatically connect to the database
+via a [Badger::Database::Engine](https://metacpan.org/pod/Badger%3A%3ADatabase%3A%3AEngine) module.  The database will be disconnected
+automatically when the `Badger::Database` object goes out of scope and is
 garbage collected.
 
-Alternately, you can provide a reference to an existing L<DBI> database
+Alternately, you can provide a reference to an existing [DBI](https://metacpan.org/pod/DBI) database
 handle.  In this case the database connection will not be closed
-automatically when the C<Badger::Database> object goes out of scope.
+automatically when the `Badger::Database` object goes out of scope.
 
     my $dbh = DBI->connect(...);
     my $db  = Badger::Database(
         dbh => $dbh
     );
 
-=head2 RUNNING DBI QUERIES
+## RUNNING DBI QUERIES
 
-The C<Badger::Database> module provides method for making queries that
-map directly onto the underlying L<DBI> implementation.  You can use
-the L<prepare()> method to prepare a SQL query into a L<DBI> statement
+The `Badger::Database` module provides method for making queries that
+map directly onto the underlying [DBI](https://metacpan.org/pod/DBI) implementation.  You can use
+the [prepare()](https://metacpan.org/pod/prepare%28%29) method to prepare a SQL query into a [DBI](https://metacpan.org/pod/DBI) statement
 handle.
 
     my $sth = $db->prepare('SELECT * FROM users WHERE status=?');
@@ -422,53 +184,53 @@ as usual.
     my $user = $sth->fetchrow_hashref;
     print $user->{ name };
 
-There is also the all-in-one L<execute()> method.
+There is also the all-in-one [execute()](https://metacpan.org/pod/execute%28%29) method.
 
     $sth  = $db->execute('SELECT * FROM users WHERE status=?', 'active');
     $user = $sth->fetchrow_hashref;
     print $user->{ name };
 
-The L<dbh()> method returns the current L<DBI> database handle in case you
+The [dbh()](https://metacpan.org/pod/dbh%28%29) method returns the current [DBI](https://metacpan.org/pod/DBI) database handle in case you
 want to access any of its other methods.
 
     $dbh  = $db->dbh;
 
-You'll notice that C<Badger::Database> doesn't attempt to obscure the
-underlying L<DBI> implementation from you.  If you already know the basics
-of using L<DBI> then you can start using C<Badger::Database> and work up
+You'll notice that `Badger::Database` doesn't attempt to obscure the
+underlying [DBI](https://metacpan.org/pod/DBI) implementation from you.  If you already know the basics
+of using [DBI](https://metacpan.org/pod/DBI) then you can start using `Badger::Database` and work up
 to the more advanced concepts at your own pace.
 
-=head2 QUERY OBJECTS
+## QUERY OBJECTS
 
-The L<query()> method can be used to create a L<Badger::Database::Query>
-object. This is a thin wrapper around a L<DBI> statement handle, with some
+The [query()](https://metacpan.org/pod/query%28%29) method can be used to create a [Badger::Database::Query](https://metacpan.org/pod/Badger%3A%3ADatabase%3A%3AQuery)
+object. This is a thin wrapper around a [DBI](https://metacpan.org/pod/DBI) statement handle, with some
 extra methods of convenience.
 
     my $query = $db->query('SELECT * FROM users WHERE status=?');
 
-You can call the L<execute()|Badger::Database::Query/execute()> method on it,
-just as you would on a naked L<DBI> statement handle. In fact it returns the
-L<DBI> statement handle so that you can retrieve data from it.
+You can call the [execute()](https://metacpan.org/pod/Badger%3A%3ADatabase%3A%3AQuery#execute) method on it,
+just as you would on a naked [DBI](https://metacpan.org/pod/DBI) statement handle. In fact it returns the
+[DBI](https://metacpan.org/pod/DBI) statement handle so that you can retrieve data from it.
 
     my $sth  = $query->execute('active');
     my $rows = $sth->fetchall_hashref;
 
 If you want to execute a query and fetch all rows returned by it, as shown in
 the example above, then you can call the
-L<rows()|Badger::Database::Query/rows()> method as a shortcut.
+[rows()](https://metacpan.org/pod/Badger%3A%3ADatabase%3A%3AQuery#rows) method as a shortcut.
 
     my $query = $db->query('SELECT * FROM users WHERE status=?');
     my $rows  = $query->rows('active');
 
 If you just want a single row then you can call the
-L<row()|Badger::Database::Query/row()> method.  This is equivalent to
-calling L<execute()|Badger::Database::Query/execute()> and then
-L<fetchrow_hashref()|DBI/fetchrow_hashref>.
+[row()](https://metacpan.org/pod/Badger%3A%3ADatabase%3A%3AQuery#row) method.  This is equivalent to
+calling [execute()](https://metacpan.org/pod/Badger%3A%3ADatabase%3A%3AQuery#execute) and then
+[fetchrow\_hashref()](https://metacpan.org/pod/DBI#fetchrow_hashref).
 
     my $query = $db->query('SELECT * FROM users WHERE id=?');
     my $row   = $query->row(42);
 
-C<Badger::Database> implements its own L<row()> and L<rows()> methods as
+`Badger::Database` implements its own [row()](https://metacpan.org/pod/row%28%29) and [rows()](https://metacpan.org/pod/rows%28%29) methods as
 shortcuts to creating a query and calling the relevant method on it.
 
     # methods of convenience:
@@ -479,9 +241,9 @@ shortcuts to creating a query and calling the relevant method on it.
     $row  = $db->query('SELECT * FROM users WHERE id=?', 42)->row;
     $rows = $db->query('SELECT * FROM users WHERE status=?', 'active')->rows;
 
-=head2 NAMED QUERIES
+## NAMED QUERIES
 
-The C<Badger::Database> module allows you to define named queries.  You can
+The `Badger::Database` module allows you to define named queries.  You can
 do this when the object is created, like so:
 
     my $db = Badger::Database->new(
@@ -495,7 +257,7 @@ do this when the object is created, like so:
         },
     );
 
-Or by using the L<queries()> method.
+Or by using the [queries()](https://metacpan.org/pod/queries%28%29) method.
 
     $db->queries(
         user_id     => 'SELECT * FROM users WHERE id=?',
@@ -518,9 +280,9 @@ The benefit of this approach is that you can define your queries up front
 where they're easy to maintain, instead of peppering them throughout your
 source code.
 
-=head2 QUERY TEMPLATES AND FRAGMENTS
+## QUERY TEMPLATES AND FRAGMENTS
 
-C<Badger::Database> allows you to define query templates that are
+`Badger::Database` allows you to define query templates that are
 automatically expanded upon use. For example, suppose you have two queries
 that are similar, but not identical:
 
@@ -537,10 +299,10 @@ that are similar, but not identical:
         },
     );
 
-C<Badger::Database> allows you to define the common part of the SQL (the
-first two lines in the above queries) as a query I<fragment>.  You can define
+`Badger::Database` allows you to define the common part of the SQL (the
+first two lines in the above queries) as a query _fragment_.  You can define
 any number of query fragments and call them whatever you like.  In this
-case we'll call it C<select_user>.
+case we'll call it `select_user`.
 
     $db->fragments(
         select_user => q{
@@ -601,7 +363,7 @@ Here are some queries using the fragments defined above.
         user_products_by_email => q{ <select_user_products> WHERE user.email = ? },
     );
 
-=head2 DATABASE TABLES
+## DATABASE TABLES
 
 The all-in-one approach illustrated in the previous examples is fine for
 small databases (in the sense of having few tables, rather than few records
@@ -610,16 +372,16 @@ scheme and many different queries you want to run against it, then you will
 soon find things becoming unwieldy.
 
 TODO:
-  * Badger::Database::Table allows you to compartmentalise your database
+  \* Badger::Database::Table allows you to compartmentalise your database
     into different tables.
-  * In most cases, you'll have a 1-1 correspondence between your db tables
+  \* In most cases, you'll have a 1-1 correspondence between your db tables
     and the table modules you create.  But you don't have to - a table module
     can join onto any number of different tables in the db.
-  * it gets tedious writing queries by hand - B::Db::Table can automate this
+  \* it gets tedious writing queries by hand - B::Db::Table can automate this
 
-=head1 METHODS
+# METHODS
 
-=head2 new()
+## new()
 
 Create a new database object.
 
@@ -634,72 +396,72 @@ Create a new database object.
 
 It accepts the following parameters:
 
-=head3 type
+### type
 
-The C<type> parameter indicates the underlying database type.
+The `type` parameter indicates the underlying database type.
 
-The L<Badger::Database> module is entirely generic for all database
+The [Badger::Database](https://metacpan.org/pod/Badger%3A%3ADatabase) module is entirely generic for all database
 types (Postgres, MySQL, etc.) thanks to the magic of the underlying
 DBI/DBD bridge.
 
 However, some of this generic functionality must be implemented in
 different ways depending on the specific database type. An example of
-this is the L<insert_id()> method which returns the identfier of the
+this is the [insert\_id()](https://metacpan.org/pod/insert_id%28%29) method which returns the identfier of the
 last row inserted (used in cases where the id is automatically generated
 by the underlying database).
 
-So the C<Badger::Database> module acts as a base class for other
+So the `Badger::Database` module acts as a base class for other
 subclassed modules which handle the specifics of different database
-types.  The C<new()> constructor method uses the C<type> parameter
+types.  The `new()` constructor method uses the `type` parameter
 to determine which of these modules should be used, loads it, and
-then delegates to the C<new()> method of that subclass.
+then delegates to the `new()` method of that subclass.
 
-We currently have support for MySQL (L<Badger::Database::Engine::Mysql>),
-Postgres (L<Badger::Database::Engine::Postgres>) and SQLite
-(L<Badger::Database::Engine::SQLite>). Adding support for other databases
+We currently have support for MySQL ([Badger::Database::Engine::Mysql](https://metacpan.org/pod/Badger%3A%3ADatabase%3A%3AEngine%3A%3AMysql)),
+Postgres ([Badger::Database::Engine::Postgres](https://metacpan.org/pod/Badger%3A%3ADatabase%3A%3AEngine%3A%3APostgres)) and SQLite
+([Badger::Database::Engine::SQLite](https://metacpan.org/pod/Badger%3A%3ADatabase%3A%3AEngine%3A%3ASQLite)). Adding support for other databases
 should be trivial as most subclasses only need to implement one or two simple
 methods.
 
-The C<type> parameter is case-insensitive and is mapped to the correct
-module by a hash array defined in the C<$TYPES> package variable. For
-MySQL databases, specify a C<type> of C<mysql> (or any case-insensitive
-equivalent, e.g. C<MySQL>, C<mySQL>).  For PostgreSQL, we'll accept
-C<pg>, C<postgres> or C<postgresql>, also case insensitive.
+The `type` parameter is case-insensitive and is mapped to the correct
+module by a hash array defined in the `$TYPES` package variable. For
+MySQL databases, specify a `type` of `mysql` (or any case-insensitive
+equivalent, e.g. `MySQL`, `mySQL`).  For PostgreSQL, we'll accept
+`pg`, `postgres` or `postgresql`, also case insensitive.
 
 The object you get back will then be of the corresponding
-L<Badger::Database::Engine::Mysql> subclass. In terms of their external API, they
-are identical to L<Badger::Database> objects. They only differ on the
-I<inside> in terms of how certain methods are implement.
+[Badger::Database::Engine::Mysql](https://metacpan.org/pod/Badger%3A%3ADatabase%3A%3AEngine%3A%3AMysql) subclass. In terms of their external API, they
+are identical to [Badger::Database](https://metacpan.org/pod/Badger%3A%3ADatabase) objects. They only differ on the
+_inside_ in terms of how certain methods are implement.
 
-The long and short of it is that you can call C<insert_id()> on either
-object and it will I<Do The Right Thing> for the underlying database.
+The long and short of it is that you can call `insert_id()` on either
+object and it will _Do The Right Thing_ for the underlying database.
 
-=head3 driver
+### driver
 
 If you want to connect to a database for which we don't have a subclass
-module then you must manually specify the C<driver> parameter to
-indicate the C<DBD> driver to use (e.g. C<mysql>, C<Pg>).
+module then you must manually specify the `driver` parameter to
+indicate the `DBD` driver to use (e.g. `mysql`, `Pg`).
 
     my $db = Badger::Database->new({
         driver => 'ODBC',
         name   => 'example'
     });
 
-In this case, some methods like C<insert_id()> may not work as expected.
+In this case, some methods like `insert_id()` may not work as expected.
 If you want them to work properly then you should add them to a custom
-C<Badger::Database::Engine::ODBC> subclass module (for example) and use the
-C<type> parameter to use it.
+`Badger::Database::Engine::ODBC` subclass module (for example) and use the
+`type` parameter to use it.
 
-=head3 name / database
+### name / database
 
-The C<name> parameter specifies the database name.
+The `name` parameter specifies the database name.
 
     my $db = Badger::Database->new({
         type => 'mysql',
         name => 'badger',       # database name
     });
 
-It can also be specified as C<database> in case you find that easier
+It can also be specified as `database` in case you find that easier
 to remember.
 
     my $db = Badger::Database->new({
@@ -707,9 +469,9 @@ to remember.
         database => 'badger',   # database name
     });
 
-=head3 user / username
+### user / username
 
-The C<user> (or C<username>) parameter is used to specify the username
+The `user` (or `username`) parameter is used to specify the username
 for connecting to the database.
 
     my $db = Badger::Database->new({
@@ -718,9 +480,9 @@ for connecting to the database.
         user => 'nigel',        # user name
     });
 
-=head3 pass / password
+### pass / password
 
-The C<pass> (or C<password>) parameter is used to specify the password
+The `pass` (or `password`) parameter is used to specify the password
 for connecting to the database.
 
     my $db = Badger::Database->new({
@@ -730,7 +492,7 @@ for connecting to the database.
         pass => 'top_secret',   # password
     });
 
-=head2 connect()
+## connect()
 
 Method to connect to the underlying database.
 
@@ -746,27 +508,27 @@ This can also be call as a class method to create a new database object
         pass => 'top_secret',
     });
 
-=head2 disconnect()
+## disconnect()
 
 Disconnect from the underlying database. This method is called
 automatically by the DESTROY method when the object goes out of scope.
 
-=head2 prepare($sql)
+## prepare($sql)
 
-Method to prepares an SQL query.  It returns a C<DBI> statement handle.
+Method to prepares an SQL query.  It returns a `DBI` statement handle.
 
     my $sth = $db->prepare('SELECT * FROM users WHERE id = ?');
     $sth->execute(12345);
 
-=head2 query($sql, @args)
+## query($sql, @args)
 
-Method to prepare and execute a SQL query. It returns a C<DBI>
+Method to prepare and execute a SQL query. It returns a `DBI`
 statement handle.  TODO: change this... it now returns a query
 object.
 
     my $sth = $db->query('SELECT * FROM users WHERE id = ?', 12345);
 
-=head2 row($sql, @args)
+## row($sql, @args)
 
 Method to return a single row from the database. It prepares and executes
 an SQL query, then returns a reference to a hash array containing the
@@ -775,7 +537,7 @@ data from the first/only record returned.
     my $user = $db->row('SELECT * FROM users WHERE id = ?', 12345);
     print $user->{ name };
 
-=head2 rows($sql, @args)
+## rows($sql, @args)
 
 Method to return a number of rows from the database. It prepares and
 executes an SQL query, then returns a reference to a list containing
@@ -787,7 +549,7 @@ references to hash arrays containing the data from the records returned.
         print $user->{ name };
     }
 
-=head2 column($sql, @args)
+## column($sql, @args)
 
 Method to return a single column from the database(). It prepares and
 executes a SQL query, then returns a reference to a list containing the
@@ -799,38 +561,38 @@ column value from each record returned.
         print $country;
     }
 
-=head2 quote($value,$data_type)
+## quote($value,$data\_type)
 
-Returns a quoted version of the C<$value> string by delegation to the
-DBI C<quote()> method.  An optional second parameter can be use to
+Returns a quoted version of the `$value` string by delegation to the
+DBI `quote()` method.  An optional second parameter can be use to
 specify an alternate data type.
 
     print $db->quote("You mustn't run with scissors");
 
-=head2 insert_id($table,$field)
+## insert\_id($table,$field)
 
 Returns the value of the identifier field of the last row inserted into
 a database table.
 
     print "inserted realm ", $db->insert_id( customer => 'id' );
 
-This method is redefined by subclasses to I<Do The Right Thing> for the
-underlying database. See the discussion in the L<new()> method for
+This method is redefined by subclasses to _Do The Right Thing_ for the
+underlying database. See the discussion in the [new()](https://metacpan.org/pod/new%28%29) method for
 further details.
 
-=head2 dbh()
+## dbh()
 
-Returns a reference to the underlying C<DBI> database handle.
+Returns a reference to the underlying `DBI` database handle.
 
-=head1 AUTHOR
+# AUTHOR
 
-Andy Wardley L<http://wardley.org/>
+Andy Wardley [http://wardley.org/](http://wardley.org/)
 
-=head1 COPYRIGHT
+# COPYRIGHT
 
 Copyright (C) 1999-2022 Andy Wardley.  All Rights Reserved.
 
-This module is derived in part from the C<Template::Plugin::DBI> module,
+This module is derived in part from the `Template::Plugin::DBI` module,
 original written by Simon Matthews and distributed as part of the
 Template Toolkit.  It was re-written in 2005, adapted further for use
 at Daily Internet in 2006, then again for Mobroolz in June 2007, and finally
@@ -839,17 +601,7 @@ became truly generic for Badger between July 2008 and January 2009.
 This module is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
 
-=head1 SEE ALSO
+# SEE ALSO
 
-L<Badger::Database::Table>, L<Badger::Database::Record>, L<Badger::Database::Model>,
-L<Badger::Hub>
-
-=cut
-
-# Local Variables:
-# mode: Perl
-# perl-indent-level: 4
-# indent-tabs-mode: nil
-# End:
-#
-# vim: expandtab shiftwidth=4:
+[Badger::Database::Table](https://metacpan.org/pod/Badger%3A%3ADatabase%3A%3ATable), [Badger::Database::Record](https://metacpan.org/pod/Badger%3A%3ADatabase%3A%3ARecord), [Badger::Database::Model](https://metacpan.org/pod/Badger%3A%3ADatabase%3A%3AModel),
+[Badger::Hub](https://metacpan.org/pod/Badger%3A%3AHub)
