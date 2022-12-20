@@ -10,12 +10,14 @@ use Badger::Class
         DRIVER            => 'mysql',
         MYSQL_SERVER_GONE => 2006,  # MySQL server has gone away
         MYSQL_SERVER_LOST => 2013,  # No error, but missing/incomplete answer
+        MYSQL_INACTIVITY  => 4031,  # The client was disconnected by the server because of inactivity
         GET_WAIT_TIMEOUT  => 'SELECT @@global.wait_timeout AS gtime, @@session.wait_timeout AS stime',
         UNDEF             => '<undef>',
         SERIAL_TYPE       => 'SERIAL',
         SERIAL_REF        => 'BIGINT UNSIGNED',
     },
     messages => {
+        dbi         => 'DBI %s failed (%s): %s',
         timeouts    => 'GLOBAL wait_timeout = %s   SESSION wait_timeout = %s',
         gone_no_sql => "MySQL server went away and we don't have the source to reconstruct the query",
     };
@@ -84,7 +86,7 @@ sub execute_query {
         "  sth: $sth\n"
     ) if DEBUG;
 
-     # work around MySQL server going away when using TCP/IP socket
+    # work around MySQL server going away when using TCP/IP socket
     unless ($self->try( execute => $sth, @_ )) {
         my $error = $sth->err;
 #        local $DEBUG = 1;
@@ -92,8 +94,8 @@ sub execute_query {
         $self->debug("DBI execute failed: $error\n") if $DEBUG;
 
         # The MySQL server connection went away
-        if (($error == MYSQL_SERVER_GONE) || ($error == MYSQL_SERVER_LOST)) {
-            $self->debug("MySQL server went away - reconnecting\n") if $DEBUG;
+        if (($error == MYSQL_SERVER_GONE) || ($error == MYSQL_SERVER_LOST) || ($error == MYSQL_INACTIVITY)) {
+            $self->debug("MySQL server went away ($error) - reconnecting\n") if $DEBUG;
             $self->reconnect();
             $self->debug("Re-preparing query\n") if $DEBUG;
             $sth = $query->prepare;
@@ -102,8 +104,8 @@ sub execute_query {
                 || return $self->error_msg( dbi => execute => $sth->errstr );
         }
         else {
-            $self->debug("DBI execute failed") if $DEBUG;
-            return $self->error_msg( dbi => execute => $sth->errstr, $query->sql );
+            $self->debug("DBI execute failed ($error)");
+            return $self->error_msg( dbi => execute => $error, $sth->errstr, $query->sql );
         }
     }
 
