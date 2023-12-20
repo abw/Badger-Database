@@ -21,19 +21,19 @@ use Badger::Class
         any   => 'DB',
     },
     config    => [
-       'dsn',                                    # optional dsn
-       'hub',                                    # optional hub reference
-       'options',                                # DBI option (rename to dbi_options?)
-       'engine|class:ENGINE!',                   # mandatory engine type
-       'driver|type|class:DRIVER',               # optional driver, to override engine
-       'database|name|class:DATABASE!',          # mandatory name of database
-       'username|user|class:USERNAME',           # optional login credentials and
-       'password|pass|class:PASSWORD',           # connection details...
-       'host|class:HOST',
-       'port|class:PORT',
-       'model|class:MODEL|method:MODEL!',        # name of model class
-       'table|class:TABLE',                      # optional name of table class
-     ];
+        'dsn',                                    # optional dsn
+        'hub',                                    # optional hub reference
+        'options',                                # DBI option (rename to dbi_options?)
+        'engine|class:ENGINE!',                   # mandatory engine type
+        'driver|type|class:DRIVER',               # optional driver, to override engine
+        'database|name|class:DATABASE!',          # mandatory name of database
+        'username|user|class:USERNAME',           # optional login credentials and
+        'password|pass|class:PASSWORD',           # connection details...
+        'host|class:HOST',
+        'port|class:PORT',
+        'model|class:MODEL|method:MODEL!',        # name of model class
+        'table|class:TABLE',                      # optional name of table class
+    ];
 
 our $VERSION = 0.03;                    # for ExtUtils::MakeMaker
 

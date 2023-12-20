@@ -32,15 +32,15 @@ use Badger::Class
         dbh     => \&connect,
     },
     config      => [
-       'dbh',
-       'dsn',
-       'options',
-       'database|name!',
-       'driver|type|class:DRIVER|method:DRIVER!',
-       'username|user',
-       'password|pass',
-       'host|class:HOST',
-       'port|class:PORT',
+        'dbh',
+        'dsn',
+        'options',
+        'database|name!',
+        'driver|type|class:DRIVER|method:DRIVER!',
+        'username|user',
+        'password|pass',
+        'host|class:HOST',
+        'port|class:PORT',
     ];
 
 #-----------------------------------------------------------------------
