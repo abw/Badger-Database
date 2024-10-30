@@ -837,8 +837,8 @@ implemented as a subclass of L<Badger::Database::Record>.
 
 With those definitions in place, the base class methods inherited from
 L<Badger::Database::Table> can figure out enough about the database to
-perform basic L<create()>, L<exists()>, L<fetch()>, L<update()> and
-L<delete()> operations.
+perform basic C<create()>, C<exists()>, C<fetch()>, C<update()> and
+C<delete()> operations.
 
 =head2 Initialising a Database Table Module
 
@@ -899,8 +899,8 @@ default data provided by the database will also be present in the
 object returned.
 
 If, for example, our C<widget> table uses an C<AUTO_INCREMENT> to
-generate a unique C<id> for the widget, then we can call L<create()>
-to insert the record, and then call the L<id()> method on the object
+generate a unique C<id> for the widget, then we can call C<create()>
+to insert the record, and then call the C<id()> method on the object
 returned to determine the identifier that was assigned to it.
 
     $widget = $widgets->create({
@@ -930,7 +930,7 @@ The C<delete()> method allows you to delete a record.
 =head2 Writing Custom Database Table Methods
 
 If you need to do anything more complicated then you'll need to write your own
-custom methods for L<create()>, L<fetch()>, and so on. Here's an example (a
+custom methods for C<create()>, C<fetch()>, and so on. Here's an example (a
 fictional C<Example::Merchants> module) where we want to support different
 search parameters. In this case, a merchant can be specified by numerical
 identifier or their realm (a URI).
@@ -993,7 +993,7 @@ know is that it returns a reference to a hash array containing an C<id> or
 C<realm> item.
 
 Either way, we call the C<row()> method on the L<Badger::Database>
-object stored in our C<$self->{ database }> value (C<$db>). If we got
+object stored in our C<$self-E<gt>{ database }> value (C<$db>). If we got
 passed an C<id> parameter then we use the query in
 C<$QUERIES-E<gt>{ fetch_id }>:
 
